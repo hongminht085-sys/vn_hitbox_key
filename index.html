@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VN Hitbox - Key 24h</title>
+    <style>
+        body { background: #0a0a12; color: #00f3ff; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #101018; border: 1px solid #00f3ff; padding: 25px; border-radius: 10px; text-align: center; width: 340px; box-shadow: 0 0 15px rgba(0,243,255,0.2); }
+        h2 { margin-bottom: 15px; font-size: 16px; }
+        p { font-size: 11px; color: #9090b0; margin-bottom: 15px; }
+        .btn { background: #00f3ff; color: #0a0a12; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; text-decoration: none; display: block; margin-top: 10px; width: 100%; box-sizing: border-box; font-size: 12px; }
+        .btn:hover { background: #00c2cc; }
+        .tiktok-btn { background: #ff0050; color: #fff; }
+        .tiktok-btn:hover { background: #d90043; }
+        input { width: 100%; padding: 10px; background: #181820; border: 1px solid #404070; color: #00ff96; text-align: center; border-radius: 5px; margin-top: 10px; font-size: 13px; box-sizing: border-box; }
+        .hidden { display: none; }
+        .completed { background: #153525; border: 1px solid #00ff96; padding: 8px; border-radius: 5px; font-size: 11px; color: #00ff96; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>⚡ VN HITBOX // KEY 24H</h2>
+    <p>Hoàn thành 2 bước để nhận mã key có hiệu lực trong 24 giờ:</p>
+    
+    <!-- Bước 1: Follow TikTok (Thay link của bro) -->
+    <a href="LINK_TIKTOK_FOLLOW_CUA_BRO" target="_blank" class="btn tiktok-btn" onclick="completeStep(1)">1. FOLLOW ACC TIKTOK</a>
+    <div id="status1" class="hidden completed">✔ Đã bấm Follow!</div>
+
+    <!-- Bước 2: Tim video (Thay link của bro) -->
+    <a href="LINK_TIKTOK_VIDEO_CUA_BRO" target="_blank" class="btn tiktok-btn" onclick="completeStep(2)" style="margin-top: 8px;">2. THẢ TIM VIDEO TIKTOK</a>
+    <div id="status2" class="hidden completed">✔ Đã bấm Thả Tim!</div>
+
+    <!-- Khu vực nhận Key -->
+    <div id="keyBoxSection" class="hidden" style="margin-top: 15px;">
+        <p style="color: #00ff96; margin-bottom: 5px;">Key của bạn (Hạn 24h):</p>
+        <input type="text" id="keyOutput" readonly>
+        <button class="btn" onclick="copyKey()" style="background: #00ff96; color: #0a0a12; margin-top: 8px;">SAO CHÉP KEY</button>
+    </div>
+</div>
+
+<script>
+    let step1Done = false;
+    let step2Done = false;
+
+    function completeStep(step) {
+        if (step === 1) {
+            step1Done = true;
+            document.getElementById('status1').classList.remove('hidden');
+        }
+        if (step === 2) {
+            step2Done = true;
+            document.getElementById('status2').classList.remove('hidden');
+        }
+
+        if (step1Done && step2Done) {
+            setTimeout(function() {
+                document.getElementById('keyBoxSection').classList.remove('hidden');
+                
+                let savedKey = localStorage.getItem("vn_user_key");
+                let savedTime = localStorage.getItem("vn_key_time");
+                let currentTime = new Date().getTime();
+                
+                let oneDayMs = 24 * 60 * 60 * 1000;
+                
+                if (!savedKey || !savedTime || (currentTime - savedTime > oneDayMs)) {
+                    let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                    let randomStr = "";
+                    for (let i = 0; i < 10; i++) {
+                        randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    savedKey = "vn-" + randomStr;
+                    
+                    localStorage.setItem("vn_user_key", savedKey);
+                    localStorage.setItem("vn_key_time", currentTime);
+                }
+                
+                document.getElementById('keyOutput').value = savedKey;
+            }, 500);
+        }
+    }
+
+    function copyKey() {
+        var copyText = document.getElementById("keyOutput");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyText.value);
+        alert("Đã sao chép key thành công: " + copyText.value);
+    }
+</script>
+
+</body>
+</html>
