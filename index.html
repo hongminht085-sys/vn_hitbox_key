@@ -3,82 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VN Hitbox - Key 24h</title>
+    <title>vn-hitbox - Get Key</title>
     <style>
-        body { background: #0a0a12; color: #00f3ff; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #101018; border: 1px solid #00f3ff; padding: 25px; border-radius: 10px; text-align: center; width: 340px; box-shadow: 0 0 15px rgba(0,243,255,0.2); }
-        h2 { margin-bottom: 15px; font-size: 16px; }
-        p { font-size: 11px; color: #9090b0; margin-bottom: 15px; }
-        .btn { background: #00f3ff; color: #0a0a12; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; text-decoration: none; display: block; margin-top: 10px; width: 100%; box-sizing: border-box; font-size: 12px; }
-        .btn:hover { background: #00c2cc; }
-        .tiktok-btn { background: #ff0050; color: #fff; }
-        .tiktok-btn:hover { background: #d90043; }
-        input { width: 100%; padding: 10px; background: #181820; border: 1px solid #404070; color: #00ff96; text-align: center; border-radius: 5px; margin-top: 10px; font-size: 13px; box-sizing: border-box; }
-        .hidden { display: none; }
-        .completed { background: #153525; border: 1px solid #00ff96; padding: 8px; border-radius: 5px; font-size: 11px; color: #00ff96; margin-top: 5px; }
+        body {
+            background-color: #0a0a12;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #12121c;
+            border: 1px solid #00f3ff;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            width: 320px;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+        h2 {
+            color: #00f3ff;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background-color: #ff0050;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+        .btn:disabled {
+            background-color: #333344;
+            color: #888899;
+            cursor: not-allowed;
+        }
+        .btn-get {
+            background-color: #00c8ff;
+            color: #0a0a12;
+        }
+        .key-box {
+            background-color: #1a1a2e;
+            border: 1px dashed #00f3ff;
+            padding: 10px;
+            margin-top: 15px;
+            word-break: break-all;
+            color: #00ff96;
+            font-weight: bold;
+            font-size: 14px;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>⚡ VN HITBOX // KEY 24H</h2>
-    <p>Hoàn thành 2 bước để nhận mã key có hiệu lực trong 24 giờ:</p>
-    
-    <a href="https://tiktok.com" target="_blank" class="btn tiktok-btn" onclick="completeStep(1)">1. FOLLOW ACC TIKTOK</a>
-    <div id="status1" class="hidden completed">✔ Đã bấm Follow!</div>
+    <div class="container">
+        <h2>⚡ vn-hitbox // GET KEY</h2>
+        
+        <!-- Nút Follow TikTok đã được gắn link chuẩn của bro -->
+        <a href="https://www.tiktok.com/@scrip481?_r=1&_t=ZS-98FSutt6KxD" target="_blank" id="followBtn" class="btn" onclick="startCountdown()">
+            1. FOLLOW TIKTOK
+        </a>
 
-    <a href="https://tiktok.com" target="_blank" class="btn tiktok-btn" onclick="completeStep(2)" style="margin-top: 8px;">2. THẢ TIM VIDEO TIKTOK</a>
-    <div id="status2" class="hidden completed">✔ Đã bấm Thả Tim!</div>
+        <!-- Nút Nhận Key đếm ngược 7s -->
+        <button id="getKeyBtn" class="btn btn-get" disabled onclick="generateKey()">
+            2. LẤY KEY (7s)
+        </button>
 
-    <div id="keyBoxSection" class="hidden" style="margin-top: 15px;">
-        <p style="color: #00ff96; margin-bottom: 5px;">Key của bạn (Hạn 24h):</p>
-        <input type="text" id="keyOutput" readonly>
-        <button class="btn" onclick="copyKey()" style="background: #00ff96; color: #0a0a12; margin-top: 8px;">SAO CHÉP KEY</button>
+        <!-- Ô hiển thị Key -->
+        <div id="keyDisplay" class="key-box"></div>
     </div>
-</div>
 
-<script>
-    let step1Done = false;
-    let step2Done = false;
+    <script>
+        let hasClickedFollow = false;
 
-    function completeStep(step) {
-        if (step === 1) { step1Done = true; document.getElementById('status1').classList.remove('hidden'); }
-        if (step === 2) { step2Done = true; document.getElementById('status2').classList.remove('hidden'); }
-
-        if (step1Done && step2Done) {
-            setTimeout(function() {
-                document.getElementById('keyBoxSection').classList.remove('hidden');
-                
-                let savedKey = localStorage.getItem("vn_user_key");
-                let savedTime = localStorage.getItem("vn_key_time");
-                let currentTime = new Date().getTime();
-                let oneDayMs = 24 * 60 * 60 * 1000;
-                
-                if (!savedKey || !savedTime || (currentTime - savedTime > oneDayMs)) {
-                    let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-                    let randomStr = "";
-                    for (let i = 0; i < 10; i++) {
-                        randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
-                    }
-                    savedKey = "vn-" + randomStr;
-                    
-                    localStorage.setItem("vn_user_key", savedKey);
-                    localStorage.setItem("vn_key_time", currentTime);
+        function startCountdown() {
+            hasClickedFollow = true;
+            let btn = document.getElementById("getKeyBtn");
+            let timeLeft = 7;
+            
+            btn.disabled = true;
+            
+            let timer = setInterval(function() {
+                if (timeLeft > 0) {
+                    btn.innerText = "ĐỢI XÍU (" + timeLeft + "s)...";
+                    timeLeft--;
+                } else {
+                    clearInterval(timer);
+                    btn.innerText = "NHẬN KEY NGAY";
+                    btn.disabled = false;
                 }
-                
-                document.getElementById('keyOutput').value = savedKey;
-            }, 500);
+            }, 1000);
         }
-    }
 
-    function copyKey() {
-        var copyText = document.getElementById("keyOutput");
-        copyText.select();
-        copyText.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(copyText.value);
-        alert("Đã sao chép key thành công: " + copyText.value);
-    }
-</script>
+        function generateKey() {
+            if (!hasClickedFollow) return;
 
+            // Tạo chuỗi ngẫu nhiên gồm chữ hoa, chữ thường và số
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            let randomStr = "";
+            for (let i = 0; i < 12; i++) {
+                randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            // Gắn tiền tố vn- ở đầu
+            let finalKey = "vn-" + randomStr;
+
+            let keyBox = document.getElementById("keyDisplay");
+            keyBox.style.display = "block";
+            keyBox.innerText = finalKey;
+
+            // Tự động copy key vào bộ nhớ tạm
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(finalKey);
+                document.getElementById("getKeyBtn").innerText = "✔ ĐÃ COPY KEY!";
+            }
+        }
+    </script>
 </body>
 </html>
