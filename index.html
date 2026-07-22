@@ -24,15 +24,12 @@
     <h2>⚡ VN HITBOX // KEY 24H</h2>
     <p>Hoàn thành 2 bước để nhận mã key có hiệu lực trong 24 giờ:</p>
     
-    <!-- Bước 1: Follow TikTok (Thay link của bro) -->
-    <a href="LINK_TIKTOK_FOLLOW_CUA_BRO" target="_blank" class="btn tiktok-btn" onclick="completeStep(1)">1. FOLLOW ACC TIKTOK</a>
+    <a href="https://tiktok.com" target="_blank" class="btn tiktok-btn" onclick="completeStep(1)">1. FOLLOW ACC TIKTOK</a>
     <div id="status1" class="hidden completed">✔ Đã bấm Follow!</div>
 
-    <!-- Bước 2: Tim video (Thay link của bro) -->
-    <a href="LINK_TIKTOK_VIDEO_CUA_BRO" target="_blank" class="btn tiktok-btn" onclick="completeStep(2)" style="margin-top: 8px;">2. THẢ TIM VIDEO TIKTOK</a>
+    <a href="https://tiktok.com" target="_blank" class="btn tiktok-btn" onclick="completeStep(2)" style="margin-top: 8px;">2. THẢ TIM VIDEO TIKTOK</a>
     <div id="status2" class="hidden completed">✔ Đã bấm Thả Tim!</div>
 
-    <!-- Khu vực nhận Key -->
     <div id="keyBoxSection" class="hidden" style="margin-top: 15px;">
         <p style="color: #00ff96; margin-bottom: 5px;">Key của bạn (Hạn 24h):</p>
         <input type="text" id="keyOutput" readonly>
@@ -45,14 +42,8 @@
     let step2Done = false;
 
     function completeStep(step) {
-        if (step === 1) {
-            step1Done = true;
-            document.getElementById('status1').classList.remove('hidden');
-        }
-        if (step === 2) {
-            step2Done = true;
-            document.getElementById('status2').classList.remove('hidden');
-        }
+        if (step === 1) { step1Done = true; document.getElementById('status1').classList.remove('hidden'); }
+        if (step === 2) { step2Done = true; document.getElementById('status2').classList.remove('hidden'); }
 
         if (step1Done && step2Done) {
             setTimeout(function() {
@@ -61,7 +52,6 @@
                 let savedKey = localStorage.getItem("vn_user_key");
                 let savedTime = localStorage.getItem("vn_key_time");
                 let currentTime = new Date().getTime();
-                
                 let oneDayMs = 24 * 60 * 60 * 1000;
                 
                 if (!savedKey || !savedTime || (currentTime - savedTime > oneDayMs)) {
