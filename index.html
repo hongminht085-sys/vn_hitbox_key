@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vn-hitbox - Get Key</title>
+    <title>VN Hitbox - Get Key</title>
     <style>
         body {
-            background-color: #0a0a12;
-            color: #ffffff;
+            background-color: #0b0b12;
+            color: #00f3ff;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             justify-content: center;
@@ -16,128 +16,102 @@
             margin: 0;
         }
         .container {
-            background-color: #12121c;
+            background: #121220;
             border: 1px solid #00f3ff;
             padding: 30px;
             border-radius: 10px;
             text-align: center;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
             width: 320px;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
         }
         h2 {
-            color: #00f3ff;
-            font-size: 18px;
             margin-bottom: 20px;
-        }
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            background-color: #ff0050;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            text-decoration: none;
-            box-sizing: border-box;
-        }
-        .btn:disabled {
-            background-color: #333344;
-            color: #888899;
-            cursor: not-allowed;
-        }
-        .btn-get {
-            background-color: #00c8ff;
-            color: #0a0a12;
+            font-size: 18px;
         }
         .key-box {
-            background-color: #1a1a2e;
+            background: #18182e;
             border: 1px dashed #00f3ff;
-            padding: 10px;
-            margin-top: 15px;
-            word-break: break-all;
-            color: #00ff96;
-            font-weight: bold;
+            padding: 12px;
             font-size: 14px;
-            display: none;
+            color: #00ff96;
+            margin-bottom: 20px;
+            word-break: break-all;
+            border-radius: 6px;
+        }
+        button {
+            background-color: #00f3ff;
+            color: #0b0b12;
+            border: none;
+            padding: 12px 20px;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer;
+            border-radius: 6px;
+            width: 100%;
+            transition: 0.2s;
+        }
+        button:hover {
+            background-color: #00bfcc;
+        }
+        .note {
+            font-size: 10px;
+            color: #8888aa;
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>⚡ vn-hitbox // GET KEY</h2>
-        
-        <!-- Nút Follow TikTok chuẩn của bro -->
-        <a href="https://www.tiktok.com/@scrip481?_r=1&_t=ZS-98FSutt6KxD" target="_blank" id="followBtn" class="btn" onclick="startCountdown()">
-            1. FOLLOW TIKTOK
-        </a>
-
-        <!-- Nút Nhận Key đếm ngược 7s -->
-        <button id="getKeyBtn" class="btn btn-get" disabled onclick="generateKey()">
-            2. LẤY KEY (7s)
-        </button>
-
-        <!-- Ô hiển thị Key -->
-        <div id="keyDisplay" class="key-box"></div>
+        <h2>⚡ VN HITBOX - SYSTEM</h2>
+        <div class="key-box" id="keyDisplay">Đang tạo key ngẫu nhiên...</div>
+        <button id="copyBtn" onclick="copyKey()">COPY KEY</button>
+        <div class="note">Key chỉ dùng cho 1 thiết bị duy nhất!</div>
     </div>
 
     <script>
-        let hasClickedFollow = false;
-
-        function startCountdown() {
-            hasClickedFollow = true;
-            let btn = document.getElementById("getKeyBtn");
-            let timeLeft = 7;
-            
-            btn.disabled = true;
-            
-            let timer = setInterval(function() {
-                if (timeLeft > 0) {
-                    btn.innerText = "ĐỢI XÍU (" + timeLeft + "s)...";
-                    timeLeft--;
-                } else {
-                    clearInterval(timer);
-                    btn.innerText = "NHẬN KEY NGAY";
-                    btn.disabled = false;
-                }
-            }, 1000);
-        }
-
-        function generateKey() {
-            if (!hasClickedFollow) return;
-
-            const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            const lowercase = "abcdefghijklmnopqrstuvwxyz";
+        // Hàm random chuỗi theo đúng format: vn- [4 chữ hoa] [4 chữ thường] [3 số]
+        function generateRandomKey() {
+            const upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const lowerChars = "abcdefghijklmnopqrstuvwxyz";
             const numbers = "0123456789";
 
             let result = "vn-";
             
-            // Lấy ngẫu nhiên đúng 4 chữ in hoa
+            // Lấy 4 chữ hoa ngẫu nhiên
             for (let i = 0; i < 4; i++) {
-                result += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+                result += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
             }
-            // Lấy ngẫu nhiên đúng 4 chữ thường
+            // Lấy 4 chữ thường ngẫu nhiên
             for (let i = 0; i < 4; i++) {
-                result += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+                result += lowerChars.charAt(Math.floor(Math.random() * lowerChars.length));
             }
-            // Lấy ngẫu nhiên đúng 3 số
+            // Lấy 3 số ngẫu nhiên
             for (let i = 0; i < 3; i++) {
                 result += numbers.charAt(Math.floor(Math.random() * numbers.length));
             }
 
-            let keyBox = document.getElementById("keyDisplay");
-            keyBox.style.display = "block";
-            keyBox.innerText = result;
+            return result;
+        }
 
-            // Tự động copy key vào bộ nhớ tạm
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(result);
-                document.getElementById("getKeyBtn").innerText = "✔ ĐÃ COPY KEY!";
-            }
+        // Tạo key mới mỗi khi người dùng vào trang web
+        const newKey = generateRandomKey();
+        document.getElementById("keyDisplay").innerText = newKey;
+
+        // Lưu ý: Nếu bro muốn tự động đồng bộ key này vào file `key.txt` trên GitHub Pages, 
+        // thông thường GitHub Pages là static hosting nên không ghi đè file trực tiếp được bằng JS thuần chạy ở client.
+        // Giải pháp tối ưu: Bro có thể dùng một dịch vụ lưu trữ key online miễn phí (như Pastebin API, Firebase, hoặc Cloudflare Worker) 
+        // hoặc mỗi lần bấm nút, trang web sẽ gọi tới Worker để cập nhật key mới vào file key.txt của GitHub.
+
+        function copyKey() {
+            const keyText = document.getElementById("keyDisplay").innerText;
+            navigator.clipboard.writeText(keyText).then(() => {
+                const btn = document.getElementById("copyBtn");
+                btn.innerText = "ĐÃ COPY KEY!";
+                setTimeout(() => {
+                    btn.innerText = "COPY KEY";
+                }, 2000);
+            });
         }
     </script>
 </body>
