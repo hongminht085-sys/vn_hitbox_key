@@ -71,7 +71,7 @@
     <div class="container">
         <h2>⚡ vn-hitbox // GET KEY</h2>
         
-        <!-- Nút Follow TikTok đã được gắn link chuẩn của bro -->
+        <!-- Nút Follow TikTok chuẩn của bro -->
         <a href="https://www.tiktok.com/@scrip481?_r=1&_t=ZS-98FSutt6KxD" target="_blank" id="followBtn" class="btn" onclick="startCountdown()">
             1. FOLLOW TIKTOK
         </a>
@@ -110,23 +110,32 @@
         function generateKey() {
             if (!hasClickedFollow) return;
 
-            // Tạo chuỗi ngẫu nhiên gồm chữ hoa, chữ thường và số
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            let randomStr = "";
-            for (let i = 0; i < 12; i++) {
-                randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
+            const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const lowercase = "abcdefghijklmnopqrstuvwxyz";
+            const numbers = "0123456789";
 
-            // Gắn tiền tố vn- ở đầu
-            let finalKey = "vn-" + randomStr;
+            let result = "vn-";
+            
+            // Lấy ngẫu nhiên đúng 4 chữ in hoa
+            for (let i = 0; i < 4; i++) {
+                result += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+            }
+            // Lấy ngẫu nhiên đúng 4 chữ thường
+            for (let i = 0; i < 4; i++) {
+                result += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+            }
+            // Lấy ngẫu nhiên đúng 3 số
+            for (let i = 0; i < 3; i++) {
+                result += numbers.charAt(Math.floor(Math.random() * numbers.length));
+            }
 
             let keyBox = document.getElementById("keyDisplay");
             keyBox.style.display = "block";
-            keyBox.innerText = finalKey;
+            keyBox.innerText = result;
 
             // Tự động copy key vào bộ nhớ tạm
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(finalKey);
+                navigator.clipboard.writeText(result);
                 document.getElementById("getKeyBtn").innerText = "✔ ĐÃ COPY KEY!";
             }
         }
