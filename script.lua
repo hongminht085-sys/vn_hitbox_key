@@ -139,7 +139,6 @@ local function loadHitboxMenu(currentKey)
                 local camLook = cam.CFrame.LookVector
                 local camRight = cam.CFrame.RightVector
                 
-                -- Hỗ trợ phím W/S, A/D chuẩn theo hướng Camera và ép trục Y hướng lên rõ ràng khi bay
                 local flatLook = Vector3.new(camLook.X, 0, camLook.Z).Unit
                 local flatRight = Vector3.new(camRight.X, 0, camRight.Z).Unit
 
@@ -148,7 +147,6 @@ local function loadHitboxMenu(currentKey)
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - flatRight end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + flatRight end
                 
-                -- Nút Space để bay lên cao trực tiếp và LeftShift để xuống
                 if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
                     moveDirection = moveDirection + Vector3.new(0, 1, 0) 
                 end
@@ -156,9 +154,13 @@ local function loadHitboxMenu(currentKey)
                     moveDirection = moveDirection - Vector3.new(0, 1, 0) 
                 end
 
-                -- Nếu dùng phím di chuyển trên màn hình (Thumbstick / MoveDirection của Humanoid)
                 if humanoid.MoveDirection.Magnitude > 0 then
                     moveDirection = moveDirection + humanoid.MoveDirection
+                end
+
+                -- Sửa logic bay lên trên: Ép trực tiếp trục Y dựa theo hướng nhìn của camera hoặc nút di chuyển lên trên
+                if camLook.Y > -0.8 then
+                    moveDirection = Vector3.new(moveDirection.X, camLook.Y * 1.5, moveDirection.Z)
                 end
 
                 flyBodyVelocity.Velocity = moveDirection * 50
@@ -202,7 +204,7 @@ local function loadHitboxMenu(currentKey)
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.IgnoreGuiInset = true
 
-    -- Nút tròn mở/tắt menu chính (sửa lại để xử lý bấm nhạy cả PC và Mobile)
+    -- Nút tròn mở/tắt menu chính (Tối ưu cho Delta Mobile bằng cách dùng TextButton thông thường với TouchEnded/MouseButton1Click)
     local ToggleBtn = Instance.new("TextButton")
     ToggleBtn.Parent = gui
     ToggleBtn.Size = UDim2.new(0, 55, 0, 55)
@@ -223,7 +225,7 @@ local function loadHitboxMenu(currentKey)
     toggleStroke.Color = Color3.fromRGB(0, 243, 255)
     toggleStroke.Thickness = 2
 
-    -- Menu chính có ScrollingFrame để vuốt lên vuốt xuống toàn bộ tính năng
+    -- Menu chính có ScrollingFrame để vuốt lên xuống mượt mà như danh sách người chơi
     local main = Instance.new("ScrollingFrame")
     main.Parent = gui
     main.Size = UDim2.new(0, 310, 0, 380)
@@ -234,7 +236,7 @@ local function loadHitboxMenu(currentKey)
     main.Draggable = true
     main.Visible = true
     main.ZIndex = 8888
-    main.CanvasSize = UDim2.new(0, 0, 0, 520) -- Kéo dài nội dung bên trong để có thể vuốt lên xuống
+    main.CanvasSize = UDim2.new(0, 0, 0, 560)
     main.ScrollBarThickness = 6
     Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
 
@@ -269,7 +271,7 @@ local function loadHitboxMenu(currentKey)
     CloseBtn.ZIndex = 9001
     Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
-    CloseBtn.MouseButton1Down:Connect(function()
+    CloseBtn.MouseButton1Click:Connect(function()
         script_running = false
         isHitboxEnabled = false
         isFlyEnabled = false
@@ -281,7 +283,7 @@ local function loadHitboxMenu(currentKey)
     local toggleHitboxBtn = Instance.new("TextButton")
     toggleHitboxBtn.Parent = main
     toggleHitboxBtn.Size = UDim2.new(0.44, 0, 0, 32)
-    toggleHitboxBtn.Position = UDim2.new(0.04, 0, 0.09, 0)
+    toggleHitboxBtn.Position = UDim2.new(0.04, 0, 0.08, 0)
     toggleHitboxBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 25)
     toggleHitboxBtn.Text = "HITBOX: TẮT"
     toggleHitboxBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
@@ -297,7 +299,7 @@ local function loadHitboxMenu(currentKey)
     toggleHitboxStroke.Color = Color3.fromRGB(255, 80, 110)
     toggleHitboxStroke.Thickness = 1
 
-    toggleHitboxBtn.MouseButton1Down:Connect(function()
+    toggleHitboxBtn.MouseButton1Click:Connect(function()
         isHitboxEnabled = not isHitboxEnabled
         if isHitboxEnabled then
             toggleHitboxBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 25)
@@ -316,7 +318,7 @@ local function loadHitboxMenu(currentKey)
     local toggleFlyBtn = Instance.new("TextButton")
     toggleFlyBtn.Parent = main
     toggleFlyBtn.Size = UDim2.new(0.44, 0, 0, 32)
-    toggleFlyBtn.Position = UDim2.new(0.52, 0, 0.09, 0)
+    toggleFlyBtn.Position = UDim2.new(0.52, 0, 0.08, 0)
     toggleFlyBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 25)
     toggleFlyBtn.Text = "BAY: TẮT"
     toggleFlyBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
@@ -332,7 +334,7 @@ local function loadHitboxMenu(currentKey)
     toggleFlyStroke.Color = Color3.fromRGB(255, 80, 110)
     toggleFlyStroke.Thickness = 1
 
-    toggleFlyBtn.MouseButton1Down:Connect(function()
+    toggleFlyBtn.MouseButton1Click:Connect(function()
         isFlyEnabled = not isFlyEnabled
         if isFlyEnabled then
             toggleFlyBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 25)
@@ -347,11 +349,10 @@ local function loadHitboxMenu(currentKey)
         end
     end)
 
-    -- Đã đổi vị trí: Ô chỉnh kích thước Hitbox lên trên
     local sizeTextBox = Instance.new("TextBox")
     sizeTextBox.Parent = main
     sizeTextBox.Size = UDim2.new(0.92, 0, 0, 32)
-    sizeTextBox.Position = UDim2.new(0.04, 0, 0.16, 0)
+    sizeTextBox.Position = UDim2.new(0.04, 0, 0.15, 0)
     sizeTextBox.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
     sizeTextBox.Text = "KÍCH THƯỚC HITBOX (HIỆN TẠI: 3)"
     sizeTextBox.TextColor3 = Color3.fromRGB(0, 243, 255)
@@ -371,11 +372,10 @@ local function loadHitboxMenu(currentKey)
         end
     end)
 
-    -- Nút Reset Server đổi vị trí xuống gần danh sách
     local resetServerBtn = Instance.new("TextButton")
     resetServerBtn.Parent = main
     resetServerBtn.Size = UDim2.new(0.92, 0, 0, 28)
-    resetServerBtn.Position = UDim2.new(0.04, 0, 0.235, 0)
+    resetServerBtn.Position = UDim2.new(0.04, 0, 0.22, 0)
     resetServerBtn.BackgroundColor3 = Color3.fromRGB(40, 30, 15)
     resetServerBtn.Text = "🔄 CẬP NHẬT / REFRESH DANH SÁCH"
     resetServerBtn.TextColor3 = Color3.fromRGB(255, 200, 0)
@@ -386,11 +386,10 @@ local function loadHitboxMenu(currentKey)
     resetServerBtn.ZIndex = 9000
     Instance.new("UICorner", resetServerBtn).CornerRadius = UDim.new(0, 6)
 
-    -- Tiêu đề bảng danh sách kèm nút phóng to / thu nhỏ bảng tên
     local listTitle = Instance.new("TextLabel")
     listTitle.Parent = main
     listTitle.Size = UDim2.new(0.92, 0, 0, 22)
-    listTitle.Position = UDim2.new(0.04, 0, 0.295, 0)
+    listTitle.Position = UDim2.new(0.04, 0, 0.28, 0)
     listTitle.BackgroundTransparency = 1
     listTitle.Text = " DANH SÁCH MỤC TIÊU TELEPORT:"
     listTitle.TextColor3 = Color3.fromRGB(150, 160, 190)
@@ -403,7 +402,7 @@ local function loadHitboxMenu(currentKey)
     local toggleExpandBtn = Instance.new("TextButton")
     toggleExpandBtn.Parent = main
     toggleExpandBtn.Size = UDim2.new(0, 24, 0, 20)
-    toggleExpandBtn.Position = UDim2.new(0.92, -24, 0.295, 0)
+    toggleExpandBtn.Position = UDim2.new(0.92, -24, 0.28, 0)
     toggleExpandBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
     toggleExpandBtn.Text = "🗖"
     toggleExpandBtn.TextColor3 = Color3.fromRGB(0, 243, 255)
@@ -414,11 +413,10 @@ local function loadHitboxMenu(currentKey)
     toggleExpandBtn.ZIndex = 9001
     Instance.new("UICorner", toggleExpandBtn).CornerRadius = UDim.new(0, 4)
 
-    -- Khung danh sách người chơi (ScrollingFrame con)
     local playerListContainer = Instance.new("ScrollingFrame")
     playerListContainer.Parent = main
     playerListContainer.Size = UDim2.new(0.92, 0, 0, 130)
-    playerListContainer.Position = UDim2.new(0.04, 0, 0.338, 0)
+    playerListContainer.Position = UDim2.new(0.04, 0, 0.32, 0)
     playerListContainer.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
     playerListContainer.BorderSizePixel = 0
     playerListContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -431,10 +429,10 @@ local function loadHitboxMenu(currentKey)
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     uiListLayout.Padding = UDim.new(0, 4)
 
-    toggleExpandBtn.MouseButton1Down:Connect(function()
+    toggleExpandBtn.MouseButton1Click:Connect(function()
         isListExpanded = not isListExpanded
         if isListExpanded then
-            playerListContainer.Size = UDim2.new(0.92, 0, 0, 260)
+            playerListContainer.Size = UDim2.new(0.92, 0, 0, 250)
             toggleExpandBtn.Text = "🗕"
         else
             playerListContainer.Size = UDim2.new(0.92, 0, 0, 130)
@@ -481,7 +479,7 @@ local function loadHitboxMenu(currentKey)
                     end
                 end)
 
-                pBtn.MouseButton1Down:Connect(function()
+                pBtn.MouseButton1Click:Connect(function()
                     selectedTarget = p
                     isTeleEnabled = true
                     PopulatePlayerList()
@@ -492,15 +490,14 @@ local function loadHitboxMenu(currentKey)
     end
 
     PopulatePlayerList()
-    resetServerBtn.MouseButton1Down:Connect(PopulatePlayerList)
+    resetServerBtn.MouseButton1Click:Connect(PopulatePlayerList)
     Players.PlayerAdded:Connect(PopulatePlayerList)
     Players.PlayerRemoving:Connect(PopulatePlayerList)
 
-    -- Nút Bật/Tắt Teleport liên tục
     local teleToggleBtn = Instance.new("TextButton")
     teleToggleBtn.Parent = main
     teleToggleBtn.Size = UDim2.new(0.92, 0, 0, 35)
-    teleToggleBtn.Position = UDim2.new(0.04, 0, 0.65, 0)
+    teleToggleBtn.Position = UDim2.new(0.04, 0, 0.68, 0)
     teleToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
     teleToggleBtn.Text = "TELEPORT DÍNH MỤC TIÊU: TẮT"
     teleToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
@@ -516,7 +513,7 @@ local function loadHitboxMenu(currentKey)
     teleStroke.Color = Color3.fromRGB(255, 80, 110)
     teleStroke.Thickness = 1
 
-    teleToggleBtn.MouseButton1Down:Connect(function()
+    teleToggleBtn.MouseButton1Click:Connect(function()
         if selectedTarget then
             isTeleEnabled = not isTeleEnabled
             if isTeleEnabled then
@@ -537,39 +534,32 @@ local function loadHitboxMenu(currentKey)
         end
     end)
 
-    -- Sửa lỗi ấn nút tròn không mở/tắt được menu (dùng kết hợp Drag check chuẩn trên Mobile & PC)
+    -- Sửa lỗi nút tròn bằng cách dùng kết hợp sự kiện Touch/Click ổn định trên Delta Executor
     local isDragging = false
-    local dragStartPos = Vector2.new(0, 0)
+    local dragStartPosition = nil
 
     ToggleBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDragging = false
-            dragStartPos = input.Position
+            dragStartPosition = input.Position
         end
     end)
 
     ToggleBtn.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            if (input.Position - dragStartPos).Magnitude > 8 then
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStartPosition then
+            if (input.Position - dragStartPosition).Magnitude > 6 then
                 isDragging = true
             end
         end
     end)
 
-    ToggleBtn.MouseButton1Up:Connect(function()
+    ToggleBtn.MouseButton1Click:Connect(function()
         if not isDragging then
             menuVisible = not menuVisible
             main.Visible = menuVisible
         end
         isDragging = false
-    end)
-
-    UserInputService.InputBegan:Connect(function(i, p)
-        if p then return end
-        if i.KeyCode == Enum.KeyCode.F1 then
-            menuVisible = not menuVisible
-            main.Visible = menuVisible
-        end
+        dragStartPosition = nil
     end)
 end
 
@@ -685,7 +675,7 @@ getKeyStroke.Parent = getKeyBtn
 getKeyStroke.Color = Color3.fromRGB(0, 243, 255)
 getKeyStroke.Thickness = 1
 
-getKeyBtn.MouseButton1Down:Connect(function()
+getKeyBtn.MouseButton1Click:Connect(function()
     if setclipboard then
         setclipboard(WEB_GETKEY_URL)
         getKeyBtn.Text = "✔ ĐÃ COPY LINK VÀO CLIPBOARD!"
@@ -694,7 +684,7 @@ getKeyBtn.MouseButton1Down:Connect(function()
     end
 end)
 
-submitBtn.MouseButton1Down:Connect(function()
+submitBtn.MouseButton1Click:Connect(function()
     local inputVal = string.gsub(keyBox.Text, "%s+", "")
     
     if inputVal == CORRECT_KEY then
@@ -705,14 +695,5 @@ submitBtn.MouseButton1Down:Connect(function()
         loadHitboxMenu(CORRECT_KEY)
     else
         errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB"
-        submitBtn.Text = "XÁC NHẬN KEY"
-        for i = 1, 3 do
-            keyMain.Position = keyMain.Position + UDim2.new(0, 4, 0, 0)
-            task.wait(0.04)
-            keyMain.Position = keyMain.Position - UDim2.new(0, 8, 0, 0)
-            task.wait(0.04)
-            keyMain.Position = keyMain.Position + UDim2.0, 4, 0, 0)
-            task.wait(0.04)
-        end
     end
 end)
