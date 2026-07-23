@@ -9,10 +9,8 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local SAVE_FILE_NAME = "vn_hitbox_secure_data.json"
 local WEB_GETKEY_URL = "https://hongminht085-sys.github.io/vn_hitbox_key/"
 
--- Key duy nhất theo yêu cầu của bro
 local CORRECT_KEY = "vn-test"
 
--- Lấy mã phần cứng (HWID) duy nhất của thiết bị
 local function GetDeviceHWID()
     local success, hwid = pcall(function()
         if gethwid then
@@ -48,21 +46,19 @@ local function SaveKeyData(keyStr, hwidStr, expireTime)
     end
 end
 
-local function ClearKeyData()
-    if delfile and pcall(delfile, SAVE_FILE_NAME) then
-        return true
-    elseif writefile then
-        pcall(function() writefile(SAVE_FILE_NAME, "") end)
-    end
-end
-
--- Khai báo hàm mở Menu chính
 local function loadHitboxMenu(currentKey)
     local hitboxSize = 3
     local isHitboxEnabled = false
+    local isFlyEnabled = false
     local script_running = true
     local menuVisible = true
     local originalSizes = {}
+
+    local selectedTarget = nil
+    local isTeleEnabled = false
+
+    local flyBodyVelocity = nil
+    local flyBodyGyro = nil
 
     local function ResetAllHitboxes()
         for p, hrp in pairs(originalSizes) do
@@ -112,20 +108,74 @@ local function loadHitboxMenu(currentKey)
         end
     end
 
-    Players.PlayerRemoving:Connect(function(p)
-        if originalSizes[p] then
-            originalSizes[p] = nil
-        end
-    end)
-
     RunService.RenderStepped:Connect(function()
         if not script_running then return end
         UpdateHitboxes()
+
+        local char = Player.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            
+            if isFlyEnabled and hrp and humanoid then
+                humanoid.PlatformStand = true
+                if not flyBodyVelocity or not flyBodyVelocity.Parent then
+                    flyBodyVelocity = Instance.new("BodyVelocity")
+                    flyBodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                    flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                    flyBodyVelocity.Parent = hrp
+                end
+                if not flyBodyGyro or not flyBodyGyro.Parent then
+                    flyBodyGyro = Instance.new("BodyGyro")
+                    flyBodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                    flyBodyGyro.CFrame = workspace.CurrentCamera.CFrame
+                    flyBodyGyro.Parent = hrp
+                end
+
+                local cam = workspace.CurrentCamera
+                flyBodyGyro.CFrame = cam.CFrame
+
+                local moveDirection = Vector3.new(0, 0, 0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + cam.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - cam.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - cam.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + cam.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
+
+                flyBodyVelocity.Velocity = moveDirection * 50
+            else
+                if humanoid then humanoid.PlatformStand = false end
+                if flyBodyVelocity then flyBodyVelocity:Destroy(); flyBodyVelocity = nil end
+                if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
+            end
+
+            if isTeleEnabled and selectedTarget and selectedTarget.Character then
+                local targetChar = selectedTarget.Character
+                local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+                local targetHumanoid = targetChar:FindFirstChildOfClass("Humanoid")
+
+                if targetHrp and targetHumanoid and targetHumanoid.Health > 0 then
+                    if targetHrp.Position.Y < -5 then
+                        isTeleEnabled = false
+                        hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(0, 15, 0))
+                    else
+                        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 2)
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                    end
+                else
+                    isTeleEnabled = false
+                end
+            end
+        end
     end)
 
-    pcall(function()
-        PlayerGui.VN_Hitbox_Menu:Destroy()
+    Players.PlayerRemoving:Connect(function(p)
+        if originalSizes[p] then originalSizes[p] = nil end
+        if selectedTarget == p then selectedTarget = nil; isTeleEnabled = false end
     end)
+
+    pcall(function() PlayerGui.VN_Hitbox_Menu:Destroy() end)
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "VN_Hitbox_Menu"
@@ -156,8 +206,8 @@ local function loadHitboxMenu(currentKey)
 
     local main = Instance.new("Frame")
     main.Parent = gui
-    main.Size = UDim2.new(0, 270, 0, 280)
-    main.Position = UDim2.new(0.5, -135, 0.35, 0)
+    main.Size = UDim2.new(0, 310, 0, 380)
+    main.Position = UDim2.new(0.5, -155, 0.3, 0)
     main.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
     main.BorderColor3 = Color3.fromRGB(0, 243, 255)
     main.BorderSizePixel = 1
@@ -201,183 +251,229 @@ local function loadHitboxMenu(currentKey)
     CloseBtn.MouseButton1Down:Connect(function()
         script_running = false
         isHitboxEnabled = false
+        isFlyEnabled = false
+        isTeleEnabled = false
         ResetAllHitboxes()
         gui:Destroy()
     end)
 
     local toggleHitboxBtn = Instance.new("TextButton")
     toggleHitboxBtn.Parent = main
-    toggleHitboxBtn.Size = UDim2.new(0.88, 0, 0, 35)
-    toggleHitboxBtn.Position = UDim2.new(0.06, 0, 0.17, 0)
+    toggleHitboxBtn.Size = UDim2.new(0.44, 0, 0, 32)
+    toggleHitboxBtn.Position = UDim2.new(0.04, 0, 0.12, 0)
     toggleHitboxBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 25)
-    toggleHitboxBtn.Text = "TRẠNG THÁI: TẮT"
+    toggleHitboxBtn.Text = "HITBOX: TẮT"
     toggleHitboxBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
     toggleHitboxBtn.Font = Enum.Font.Code
-    toggleHitboxBtn.TextSize = 12
+    toggleHitboxBtn.TextSize = 11
     toggleHitboxBtn.Active = true
     toggleHitboxBtn.AutoButtonColor = false
     toggleHitboxBtn.ZIndex = 9000
     Instance.new("UICorner", toggleHitboxBtn).CornerRadius = UDim.new(0, 6)
 
-    local toggleBtnStroke = Instance.new("UIStroke")
-    toggleBtnStroke.Parent = toggleHitboxBtn
-    toggleBtnStroke.Color = Color3.fromRGB(255, 80, 110)
-    toggleBtnStroke.Thickness = 1
+    local toggleHitboxStroke = Instance.new("UIStroke")
+    toggleHitboxStroke.Parent = toggleHitboxBtn
+    toggleHitboxStroke.Color = Color3.fromRGB(255, 80, 110)
+    toggleHitboxStroke.Thickness = 1
 
     toggleHitboxBtn.MouseButton1Down:Connect(function()
         isHitboxEnabled = not isHitboxEnabled
         if isHitboxEnabled then
             toggleHitboxBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 25)
             toggleHitboxBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
-            toggleBtnStroke.Color = Color3.fromRGB(0, 255, 150)
+            toggleHitboxStroke.Color = Color3.fromRGB(0, 255, 150)
+            toggleHitboxBtn.Text = "HITBOX: BẬT"
         else
             toggleHitboxBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 25)
             toggleHitboxBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
-            toggleBtnStroke.Color = Color3.fromRGB(255, 80, 110)
+            toggleHitboxStroke.Color = Color3.fromRGB(255, 80, 110)
+            toggleHitboxBtn.Text = "HITBOX: TẮT"
             ResetAllHitboxes()
         end
     end)
 
-    RunService.RenderStepped:Connect(function()
-        if not script_running then return end
-        if isHitboxEnabled then
-            toggleHitboxBtn.Text = "TRẠNG THÁI: BẬT"
+    local toggleFlyBtn = Instance.new("TextButton")
+    toggleFlyBtn.Parent = main
+    toggleFlyBtn.Size = UDim2.new(0.44, 0, 0, 32)
+    toggleFlyBtn.Position = UDim2.new(0.52, 0, 0.12, 0)
+    toggleFlyBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 25)
+    toggleFlyBtn.Text = "BAY: TẮT"
+    toggleFlyBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
+    toggleFlyBtn.Font = Enum.Font.Code
+    toggleFlyBtn.TextSize = 11
+    toggleFlyBtn.Active = true
+    toggleFlyBtn.AutoButtonColor = false
+    toggleFlyBtn.ZIndex = 9000
+    Instance.new("UICorner", toggleFlyBtn).CornerRadius = UDim.new(0, 6)
+
+    local toggleFlyStroke = Instance.new("UIStroke")
+    toggleFlyStroke.Parent = toggleFlyBtn
+    toggleFlyStroke.Color = Color3.fromRGB(255, 80, 110)
+    toggleFlyStroke.Thickness = 1
+
+    toggleFlyBtn.MouseButton1Down:Connect(function()
+        isFlyEnabled = not isFlyEnabled
+        if isFlyEnabled then
+            toggleFlyBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 25)
+            toggleFlyBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
+            toggleFlyStroke.Color = Color3.fromRGB(0, 255, 150)
+            toggleFlyBtn.Text = "BAY: BẬT"
         else
-            toggleHitboxBtn.Text = "TRẠNG THÁI: TẮT"
+            toggleFlyBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 25)
+            toggleFlyBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
+            toggleFlyStroke.Color = Color3.fromRGB(255, 80, 110)
+            toggleFlyBtn.Text = "BAY: TẮT"
         end
     end)
 
-    local inputLabel = Instance.new("TextLabel")
-    inputLabel.Parent = main
-    inputLabel.Size = UDim2.new(0.88, 0, 0, 18)
-    inputLabel.Position = UDim2.new(0.06, 0, 0.35, 0)
-    inputLabel.BackgroundTransparency = 1
-    inputLabel.Text = "> KÍCH THƯỚC (MAX 50):"
-    inputLabel.TextColor3 = Color3.fromRGB(150, 160, 190)
-    inputLabel.Font = Enum.Font.Code
-    inputLabel.TextSize = 11
-    inputLabel.ZIndex = 9000
+    local resetServerBtn = Instance.new("TextButton")
+    resetServerBtn.Parent = main
+    resetServerBtn.Size = UDim2.new(0.92, 0, 0, 28)
+    resetServerBtn.Position = UDim2.new(0.04, 0, 0.22, 0)
+    resetServerBtn.BackgroundColor3 = Color3.fromRGB(40, 30, 15)
+    resetServerBtn.Text = "🔄 CẬP NHẬT / REFRESH DANH SÁCH"
+    resetServerBtn.TextColor3 = Color3.fromRGB(255, 200, 0)
+    resetServerBtn.Font = Enum.Font.Code
+    resetServerBtn.TextSize = 10
+    resetServerBtn.Active = true
+    resetServerBtn.AutoButtonColor = false
+    resetServerBtn.ZIndex = 9000
+    Instance.new("UICorner", resetServerBtn).CornerRadius = UDim.new(0, 6)
+
+    local playerListContainer = Instance.new("ScrollingFrame")
+    playerListContainer.Parent = main
+    playerListContainer.Size = UDim2.new(0.92, 0, 0, 130)
+    playerListContainer.Position = UDim2.new(0.04, 0, 0.32, 0)
+    playerListContainer.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+    playerListContainer.BorderSizePixel = 0
+    playerListContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    playerListContainer.ScrollBarThickness = 4
+    playerListContainer.ZIndex = 9000
+    Instance.new("UICorner", playerListContainer).CornerRadius = UDim.new(0, 6)
+
+    local uiListLayout = Instance.new("UIListLayout")
+    uiListLayout.Parent = playerListContainer
+    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    uiListLayout.Padding = UDim.new(0, 4)
+
+    local function PopulatePlayerList()
+        for _, child in pairs(playerListContainer:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy()
+            end
+        end
+
+        local count = 0
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= Player then
+                count = count + 1
+                local pBtn = Instance.new("TextButton")
+                pBtn.Parent = playerListContainer
+                pBtn.Size = UDim2.new(1, -6, 0, 32)
+                pBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
+                pBtn.Text = "  " .. p.Name
+                pBtn.TextColor3 = (selectedTarget == p) and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(220, 220, 240)
+                pBtn.Font = Enum.Font.Code
+                pBtn.TextSize = 11
+                pBtn.TextXAlignment = Enum.TextXAlignment.Left
+                pBtn.ZIndex = 9001
+                Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 4)
+
+                task.spawn(function()
+                    local success, content = pcall(function()
+                        return Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size42x42)
+                    end)
+                    if success and content and pBtn.Parent then
+                        local icon = Instance.new("ImageLabel")
+                        icon.Parent = pBtn
+                        icon.Size = UDim2.new(0, 24, 0, 24)
+                        icon.Position = UDim2.new(1, -28, 0.5, -12)
+                        icon.BackgroundTransparency = 1
+                        icon.Image = content
+                        icon.ZIndex = 9002
+                        Instance.new("UICorner", icon).CornerRadius = UDim.new(1, 0)
+                    end
+                end)
+
+                pBtn.MouseButton1Down:Connect(function()
+                    selectedTarget = p
+                    isTeleEnabled = true
+                    PopulatePlayerList()
+                end)
+            end
+        end
+        playerListContainer.CanvasSize = UDim2.new(0, 0, 0, count * 36)
+    end
+
+    PopulatePlayerList()
+    resetServerBtn.MouseButton1Down:Connect(PopulatePlayerList)
+    Players.PlayerAdded:Connect(PopulatePlayerList)
+    Players.PlayerRemoving:Connect(PopulatePlayerList)
+
+    local teleToggleBtn = Instance.new("TextButton")
+    teleToggleBtn.Parent = main
+    teleToggleBtn.Size = UDim2.new(0.92, 0, 0, 35)
+    teleToggleBtn.Position = UDim2.new(0.04, 0, 0.72, 0)
+    teleToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+    teleToggleBtn.Text = "TELEPORT DÍNH MỤC TIÊU: TẮT"
+    teleToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
+    teleToggleBtn.Font = Enum.Font.Code
+    teleToggleBtn.TextSize = 11
+    teleToggleBtn.Active = true
+    teleToggleBtn.AutoButtonColor = false
+    teleToggleBtn.ZIndex = 9000
+    Instance.new("UICorner", teleToggleBtn).CornerRadius = UDim.new(0, 6)
+
+    local teleStroke = Instance.new("UIStroke")
+    teleStroke.Parent = teleToggleBtn
+    teleStroke.Color = Color3.fromRGB(255, 80, 110)
+    teleStroke.Thickness = 1
+
+    teleToggleBtn.MouseButton1Down:Connect(function()
+        if selectedTarget then
+            isTeleEnabled = not isTeleEnabled
+            if isTeleEnabled then
+                teleToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 25)
+                teleToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
+                teleStroke.Color = Color3.fromRGB(0, 255, 150)
+                teleToggleBtn.Text = "TELEPORT: ĐANG BẬT (" .. selectedTarget.Name .. ")"
+            else
+                teleToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+                teleToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
+                teleStroke.Color = Color3.fromRGB(255, 80, 110)
+                teleToggleBtn.Text = "TELEPORT DÍNH MỤC TIÊU: TẮT"
+            end
+        else
+            teleToggleBtn.Text = "[!] HÃY CHỌN MỤC TIÊU TRÊN DANH SÁCH"
+            task.wait(1.5)
+            teleToggleBtn.Text = "TELEPORT DÍNH MỤC TIÊU: TẮT"
+        end
+    end)
 
     local sizeTextBox = Instance.new("TextBox")
     sizeTextBox.Parent = main
-    sizeTextBox.Size = UDim2.new(0.88, 0, 0, 32)
-    sizeTextBox.Position = UDim2.new(0.06, 0, 0.44, 0)
+    sizeTextBox.Size = UDim2.new(0.92, 0, 0, 32)
+    sizeTextBox.Position = UDim2.new(0.04, 0, 0.85, 0)
     sizeTextBox.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
-    sizeTextBox.Text = tostring(hitboxSize)
+    sizeTextBox.Text = "KÍCH THƯỚC HITBOX (HIỆN TẠI: 3)"
     sizeTextBox.TextColor3 = Color3.fromRGB(0, 243, 255)
     sizeTextBox.Font = Enum.Font.Code
-    sizeTextBox.TextSize = 14
+    sizeTextBox.TextSize = 11
     sizeTextBox.Active = true
     sizeTextBox.ZIndex = 9000
     Instance.new("UICorner", sizeTextBox).CornerRadius = UDim.new(0, 6)
 
-    local sizeBoxStroke = Instance.new("UIStroke")
-    sizeBoxStroke.Parent = sizeTextBox
-    sizeBoxStroke.Color = Color3.fromRGB(40, 40, 70)
-    sizeBoxStroke.Thickness = 1
-
-    sizeTextBox.FocusLost:Connect(function(enterPressed)
+    sizeTextBox.FocusLost:Connect(function()
         local val = tonumber(sizeTextBox.Text)
         if val and val > 0 then
             hitboxSize = math.clamp(val, 1, 50)
-            sizeTextBox.Text = tostring(hitboxSize)
+            sizeTextBox.Text = "KÍCH THƯỚC HITBOX: " .. tostring(hitboxSize)
         else
-            sizeTextBox.Text = tostring(hitboxSize)
-        end
-    end)
-
-    local resetBtn = Instance.new("TextButton")
-    resetBtn.Parent = main
-    resetBtn.Size = UDim2.new(0.88, 0, 0, 32)
-    resetBtn.Position = UDim2.new(0.06, 0, 0.61, 0)
-    resetBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-    resetBtn.Text = "🔄 ĐẶT LẠI MẶC ĐỊNH (3)"
-    resetBtn.TextColor3 = Color3.fromRGB(255, 180, 0)
-    resetBtn.Font = Enum.Font.Code
-    resetBtn.TextSize = 11
-    resetBtn.Active = true
-    resetBtn.AutoButtonColor = false
-    resetBtn.ZIndex = 9000
-    Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 6)
-
-    local resetStroke = Instance.new("UIStroke")
-    resetStroke.Parent = resetBtn
-    resetStroke.Color = Color3.fromRGB(255, 180, 0)
-    resetStroke.Thickness = 1
-
-    resetBtn.MouseButton1Down:Connect(function()
-        hitboxSize = 3
-        sizeTextBox.Text = "3"
-        ResetAllHitboxes()
-    end)
-
-    local clearKeyBtn = Instance.new("TextButton")
-    clearKeyBtn.Parent = main
-    clearKeyBtn.Size = UDim2.new(0.88, 0, 0, 32)
-    clearKeyBtn.Position = UDim2.new(0.06, 0, 0.77, 0)
-    clearKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 20, 30)
-    clearKeyBtn.Text = "🔑 XÓA KEY & ĐỔI MÁY"
-    clearKeyBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    clearKeyBtn.Font = Enum.Font.Code
-    clearKeyBtn.TextSize = 11
-    clearKeyBtn.Active = true
-    clearKeyBtn.AutoButtonColor = false
-    clearKeyBtn.ZIndex = 9000
-    Instance.new("UICorner", clearKeyBtn).CornerRadius = UDim.new(0, 6)
-
-    local clearKeyStroke = Instance.new("UIStroke")
-    clearKeyStroke.Parent = clearKeyBtn
-    clearKeyStroke.Color = Color3.fromRGB(255, 100, 100)
-    clearKeyStroke.Thickness = 1
-
-    clearKeyBtn.MouseButton1Down:Connect(function()
-        ClearKeyData()
-        script_running = false
-        isHitboxEnabled = false
-        ResetAllHitboxes()
-        gui:Destroy()
-        loadstring(game:HttpGet(WEB_GETKEY_URL .. "script.lua"))()
-    end)
-
-    local isDragging = false
-    local dragStartPos = Vector2.new(0, 0)
-
-    ToggleBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = false
-            dragStartPos = input.Position
-        end
-    end)
-
-    ToggleBtn.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            if (input.Position - dragStartPos).Magnitude > 6 then
-                isDragging = true
-            end
-        end
-    end)
-
-    ToggleBtn.MouseButton1Down:Connect(function()
-        isDragging = false
-    end)
-
-    ToggleBtn.MouseButton1Click:Connect(function()
-        if not isDragging then
-            menuVisible = not menuVisible
-            main.Visible = menuVisible
-        end
-    end)
-
-    UserInputService.InputBegan:Connect(function(i, p)
-        if p then return end
-        if i.KeyCode == Enum.KeyCode.F1 then
-            menuVisible = not menuVisible
-            main.Visible = menuVisible
+            sizeTextBox.Text = "KÍCH THƯỚC HITBOX (HIỆN TẠI: " .. tostring(hitboxSize) .. ")"
         end
     end)
 end
 
--- Kiểm tra key đã lưu trong máy và đối chiếu HWID
 local currentHWID = GetDeviceHWID()
 local savedData = LoadKeyData()
 
@@ -386,7 +482,6 @@ if savedData and savedData.Key == CORRECT_KEY and savedData.HWID == currentHWID 
     return
 end
 
--- GIAO DIỆN NHẬP KEY
 if PlayerGui:FindFirstChild("VN_KeyGui") then
     PlayerGui.VN_KeyGui:Destroy()
 end
@@ -503,7 +598,6 @@ end)
 submitBtn.MouseButton1Down:Connect(function()
     local inputVal = string.gsub(keyBox.Text, "%s+", "")
     
-    -- So sánh trực tiếp với key chính xác
     if inputVal == CORRECT_KEY then
         local expireTime = os.time() + 86400
         SaveKeyData(CORRECT_KEY, currentHWID, expireTime)
