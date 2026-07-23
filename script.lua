@@ -7,8 +7,10 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SAVE_FILE_NAME = "vn_hitbox_secure_data.json"
-local WEB_KEY_URL = "https://hongminht085-sys.github.io/vn_hitbox_key/key.txt"
 local WEB_GETKEY_URL = "https://hongminht085-sys.github.io/vn_hitbox_key/"
+
+-- Key duy nhất theo yêu cầu của bro
+local CORRECT_KEY = "vn-test"
 
 -- Lấy mã phần cứng (HWID) duy nhất của thiết bị
 local function GetDeviceHWID()
@@ -52,39 +54,6 @@ local function ClearKeyData()
     elseif writefile then
         pcall(function() writefile(SAVE_FILE_NAME, "") end)
     end
-end
-
--- Tải key từ web về
-local function GetKeyFromServer()
-    local success, result = pcall(function()
-        return game:HttpGet(WEB_KEY_URL)
-    end)
-    if success and result then
-        return string.gsub(result, "%s+", "")
-    end
-    return nil
-end
-
--- HÀM KIỂM TRA ĐỊNH DẠNG: Bắt buộc chuẩn 4 chữ hoa, 4 chữ thường, 3 số ngẫu nhiên (có tiền tố vn-)
-local function IsValidKeyFormat(keyStr)
-    if type(keyStr) ~= "string" then return false end
-    if #keyStr ~= 14 or string.sub(keyStr, 1, 3) ~= "vn-" then 
-        return false 
-    end
-    
-    local upperCount, lowerCount, digitCount = 0, 0, 0
-    for i = 4, 14 do
-        local char = string.sub(keyStr, i, i)
-        if string.match(char, "[%u]") then
-            upperCount = upperCount + 1
-        elseif string.match(char, "[%l]") then
-            lowerCount = lowerCount + 1
-        elseif string.match(char, "[%d]") then
-            digitCount = digitCount + 1
-        end
-    end
-    
-    return upperCount == 4 and lowerCount == 4 and digitCount == 3
 end
 
 -- Khai báo hàm mở Menu chính
@@ -367,7 +336,7 @@ local function loadHitboxMenu(currentKey)
         isHitboxEnabled = false
         ResetAllHitboxes()
         gui:Destroy()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/hongminht085-sys/vn_hitbox_key/main/script.lua"))()
+        loadstring(game:HttpGet(WEB_GETKEY_URL .. "script.lua"))()
     end)
 
     local isDragging = false
@@ -408,18 +377,13 @@ local function loadHitboxMenu(currentKey)
     end)
 end
 
--- Kiểm tra key lưu trong máy, đồng thời đối chiếu HWID thiết bị
+-- Kiểm tra key đã lưu trong máy và đối chiếu HWID
 local currentHWID = GetDeviceHWID()
 local savedData = LoadKeyData()
 
-if savedData and savedData.Key and savedData.HWID and savedData.ExpireTime and os.time() < savedData.ExpireTime then
-    if savedData.HWID == currentHWID then
-        local currentServerKey = GetKeyFromServer()
-        if currentServerKey and savedData.Key == currentServerKey then
-            loadHitboxMenu(savedData.Key)
-            return
-        end
-    end
+if savedData and savedData.Key == CORRECT_KEY and savedData.HWID == currentHWID and savedData.ExpireTime and os.time() < savedData.ExpireTime then
+    loadHitboxMenu(CORRECT_KEY)
+    return
 end
 
 -- GIAO DIỆN NHẬP KEY
@@ -539,21 +503,13 @@ end)
 submitBtn.MouseButton1Down:Connect(function()
     local inputVal = string.gsub(keyBox.Text, "%s+", "")
     
-    -- Chỉ kiểm tra định dạng ngầm, nếu sai format hoặc sai key trên web đều báo chung 1 câu
-    if not IsValidKeyFormat(inputVal) then
-        errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB"
-        return
-    end
-
-    submitBtn.Text = "ĐANG CHECK..."
-    local serverKey = GetKeyFromServer()
-    
-    if serverKey and inputVal == serverKey then
+    -- So sánh trực tiếp với key chính xác
+    if inputVal == CORRECT_KEY then
         local expireTime = os.time() + 86400
-        SaveKeyData(serverKey, currentHWID, expireTime)
+        SaveKeyData(CORRECT_KEY, currentHWID, expireTime)
         
         keyGui:Destroy()
-        loadHitboxMenu(serverKey)
+        loadHitboxMenu(CORRECT_KEY)
     else
         errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB"
         submitBtn.Text = "XÁC NHẬN KEY"
