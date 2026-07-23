@@ -37,9 +37,9 @@ local function LoadKeyData()
     return nil
 end
 
-local function SaveKeyData(keyStr, hwidStr, expireTime)
+local function SaveKeyData(keyStr, hwidStr)
     if writefile then
-        local data = { Key = keyStr, HWID = hwidStr, ExpireTime = expireTime }
+        local data = { Key = keyStr, HWID = hwidStr, Permanent = true }
         pcall(function()
             writefile(SAVE_FILE_NAME, HttpService:JSONEncode(data))
         end)
@@ -154,13 +154,9 @@ local function loadHitboxMenu(currentKey)
                     moveDirection = moveDirection - Vector3.new(0, 1, 0) 
                 end
 
+                -- Khóa cố định không bị hút xuống khi chĩa camera xuống đất, chỉ di chuyển hoàn toàn bằng nút di chuyển/phím
                 if humanoid.MoveDirection.Magnitude > 0 then
                     moveDirection = moveDirection + humanoid.MoveDirection
-                end
-
-                -- Sửa logic bay lên trên: Ép trực tiếp trục Y dựa theo hướng nhìn của camera hoặc nút di chuyển lên trên
-                if camLook.Y > -0.8 then
-                    moveDirection = Vector3.new(moveDirection.X, camLook.Y * 1.5, moveDirection.Z)
                 end
 
                 flyBodyVelocity.Velocity = moveDirection * 50
@@ -204,7 +200,7 @@ local function loadHitboxMenu(currentKey)
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.IgnoreGuiInset = true
 
-    -- Nút tròn mở/tắt menu chính (Tối ưu cho Delta Mobile bằng cách dùng TextButton thông thường với TouchEnded/MouseButton1Click)
+    -- Nút tròn mở/tắt menu chính
     local ToggleBtn = Instance.new("TextButton")
     ToggleBtn.Parent = gui
     ToggleBtn.Size = UDim2.new(0, 55, 0, 55)
@@ -225,7 +221,7 @@ local function loadHitboxMenu(currentKey)
     toggleStroke.Color = Color3.fromRGB(0, 243, 255)
     toggleStroke.Thickness = 2
 
-    -- Menu chính có ScrollingFrame để vuốt lên xuống mượt mà như danh sách người chơi
+    -- Menu chính KHÔNG draggable toàn thân nữa, cố định vị trí
     local main = Instance.new("ScrollingFrame")
     main.Parent = gui
     main.Size = UDim2.new(0, 310, 0, 380)
@@ -233,7 +229,7 @@ local function loadHitboxMenu(currentKey)
     main.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
     main.BorderSizePixel = 0
     main.Active = true
-    main.Draggable = true
+    main.Draggable = false
     main.Visible = true
     main.ZIndex = 8888
     main.CanvasSize = UDim2.new(0, 0, 0, 560)
@@ -246,7 +242,8 @@ local function loadHitboxMenu(currentKey)
     mainStroke.Thickness = 1.2
     mainStroke.Transparency = 0.2
 
-    local Title = Instance.new("TextLabel")
+    -- Thanh tiêu đề ở trên (Title) làm chỗ để di chuyển menu chính
+    local Title = Instance.new("TextButton")
     Title.Parent = main
     Title.Size = UDim2.new(1, 0, 0, 38)
     Title.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
@@ -254,8 +251,41 @@ local function loadHitboxMenu(currentKey)
     Title.TextColor3 = Color3.fromRGB(0, 243, 255)
     Title.Font = Enum.Font.Code
     Title.TextSize = 12
+    Title.AutoButtonColor = false
+    Title.Active = true
     Title.ZIndex = 9000
     Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
+
+    -- Kéo thả menu thông qua thanh tiêu đề Title
+    local draggingMenu = false
+    local dragInputMenu, mousePosMenu, framePosMenu
+
+    Title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingMenu = true
+            mousePosMenu = input.Position
+            framePosMenu = main.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingMenu = false
+                end
+            end)
+        end
+    end)
+
+    Title.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInputMenu = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInputMenu and draggingMenu then
+            local delta = input.Position - mousePosMenu
+            main.Position = UDim2.new(framePosMenu.X.Scale, framePosMenu.X.Offset + delta.X, framePosMenu.Y.Scale, framePosMenu.Y.Offset + delta.Y)
+        end
+    end)
 
     local CloseBtn = Instance.new("TextButton")
     CloseBtn.Parent = main
@@ -429,6 +459,7 @@ local function loadHitboxMenu(currentKey)
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     uiListLayout.Padding = UDim.new(0, 4)
 
+    -- Sửa nút ẩn/hiện phóng to thu nhỏ bảng danh sách ăn thao tác mượt mà
     toggleExpandBtn.MouseButton1Click:Connect(function()
         isListExpanded = not isListExpanded
         if isListExpanded then
@@ -534,13 +565,13 @@ local function loadHitboxMenu(currentKey)
         end
     end)
 
-    -- Sửa lỗi nút tròn bằng cách dùng kết hợp sự kiện Touch/Click ổn định trên Delta Executor
-    local isDragging = false
+    -- Nút tròn mở/tắt menu chính hỗ trợ bấm nhạy
+    local isDraggingToggle = false
     local dragStartPosition = nil
 
     ToggleBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = false
+            isDraggingToggle = false
             dragStartPosition = input.Position
         end
     end)
@@ -548,17 +579,17 @@ local function loadHitboxMenu(currentKey)
     ToggleBtn.InputChanged:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStartPosition then
             if (input.Position - dragStartPosition).Magnitude > 6 then
-                isDragging = true
+                isDraggingToggle = true
             end
         end
     end)
 
     ToggleBtn.MouseButton1Click:Connect(function()
-        if not isDragging then
+        if not isDraggingToggle then
             menuVisible = not menuVisible
             main.Visible = menuVisible
         end
-        isDragging = false
+        isDraggingToggle = false
         dragStartPosition = nil
     end)
 end
@@ -566,7 +597,7 @@ end
 local currentHWID = GetDeviceHWID()
 local savedData = LoadKeyData()
 
-if savedData and savedData.Key == CORRECT_KEY and savedData.HWID == currentHWID and savedData.ExpireTime and os.time() < savedData.ExpireTime then
+if savedData and savedData.Key == CORRECT_KEY and savedData.HWID == currentHWID then
     loadHitboxMenu(CORRECT_KEY)
     return
 end
@@ -688,8 +719,7 @@ submitBtn.MouseButton1Click:Connect(function()
     local inputVal = string.gsub(keyBox.Text, "%s+", "")
     
     if inputVal == CORRECT_KEY then
-        local expireTime = os.time() + 86400
-        SaveKeyData(CORRECT_KEY, currentHWID, expireTime)
+        SaveKeyData(CORRECT_KEY, currentHWID)
         
         keyGui:Destroy()
         loadHitboxMenu(CORRECT_KEY)
