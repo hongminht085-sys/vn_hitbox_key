@@ -22,7 +22,6 @@ local function GetDeviceHWID()
     if success and hwid and hwid ~= "" then
         return hwid
     end
-    -- Fallback nếu executor không hỗ trợ (dùng tên nhân vật kết hợp gameID làm mã định danh tạm)
     return Player.Name .. "_" .. tostring(game.GameId)
 end
 
@@ -66,10 +65,26 @@ local function GetKeyFromServer()
     return nil
 end
 
--- HÀM KIỂM TRA ĐỊNH DẠNG: vn- [4 chữ hoa] [4 chữ thường] [3 số]
+-- HÀM KIỂM TRA ĐỊNH DẠNG: Bắt buộc chuẩn 4 chữ hoa, 4 chữ thường, 3 số ngẫu nhiên (có tiền tố vn-)
 local function IsValidKeyFormat(keyStr)
     if type(keyStr) ~= "string" then return false end
-    return string.match(keyStr, "^vn-[%u][%u][%u][%u][%l][%l][%l][%l][%d][%d][%d]$") ~= nil
+    if #keyStr ~= 14 or string.sub(keyStr, 1, 3) ~= "vn-" then 
+        return false 
+    end
+    
+    local upperCount, lowerCount, digitCount = 0, 0, 0
+    for i = 4, 14 do
+        local char = string.sub(keyStr, i, i)
+        if string.match(char, "[%u]") then
+            upperCount = upperCount + 1
+        elseif string.match(char, "[%l]") then
+            lowerCount = lowerCount + 1
+        elseif string.match(char, "[%d]") then
+            digitCount = digitCount + 1
+        end
+    end
+    
+    return upperCount == 4 and lowerCount == 4 and digitCount == 3
 end
 
 -- Khai báo hàm mở Menu chính
@@ -193,7 +208,7 @@ local function loadHitboxMenu(currentKey)
     Title.Parent = main
     Title.Size = UDim2.new(1, 0, 0, 38)
     Title.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
-    Title.Text = "⚡ [ vn hitbox ] // 1 DEVICE"
+    Title.Text = "⚡ [ vn hitbox ] // PANEL"
     Title.TextColor3 = Color3.fromRGB(0, 243, 255)
     Title.Font = Enum.Font.Code
     Title.TextSize = 12
@@ -441,7 +456,7 @@ local keyTitle = Instance.new("TextLabel")
 keyTitle.Parent = keyMain
 keyTitle.Size = UDim2.new(1, 0, 0, 40)
 keyTitle.BackgroundColor3 = Color3.fromRGB(16, 16, 28)
-keyTitle.Text = "⚡ [ vn hitbox ] // 1 DEVICE_AUTH"
+keyTitle.Text = "⚡ [ vn hitbox ] // AUTH"
 keyTitle.TextColor3 = Color3.fromRGB(0, 243, 255)
 keyTitle.Font = Enum.Font.Code
 keyTitle.TextSize = 12
@@ -453,7 +468,7 @@ keyBox.Parent = keyMain
 keyBox.Size = UDim2.new(0.85, 0, 0, 38)
 keyBox.Position = UDim2.new(0.075, 0, 0.25, 0)
 keyBox.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
-keyBox.PlaceholderText = "> Nhập key (vn-ABCDabcd123)"
+keyBox.PlaceholderText = "> Nhập key vào đây..."
 keyBox.Text = ""
 keyBox.TextColor3 = Color3.fromRGB(0, 255, 150)
 keyBox.PlaceholderColor3 = Color3.fromRGB(90, 90, 120)
@@ -476,7 +491,7 @@ errorLabel.BackgroundTransparency = 1
 errorLabel.Text = ""
 errorLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
 errorLabel.Font = Enum.Font.Code
-errorLabel.TextSize = 9
+errorLabel.TextSize = 10
 errorLabel.ZIndex = 10000
 
 local submitBtn = Instance.new("TextButton")
@@ -524,8 +539,9 @@ end)
 submitBtn.MouseButton1Down:Connect(function()
     local inputVal = string.gsub(keyBox.Text, "%s+", "")
     
+    -- Chỉ kiểm tra định dạng ngầm, nếu sai format hoặc sai key trên web đều báo chung 1 câu
     if not IsValidKeyFormat(inputVal) then
-        errorLabel.Text = "[!] SAI ĐỊNH DẠNG (YÊU CẦU: vn-XXXXxxxx123)"
+        errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB"
         return
     end
 
@@ -534,7 +550,6 @@ submitBtn.MouseButton1Down:Connect(function()
     
     if serverKey and inputVal == serverKey then
         local expireTime = os.time() + 86400
-        -- Lưu kèm HWID thiết bị hiện tại vào máy
         SaveKeyData(serverKey, currentHWID, expireTime)
         
         keyGui:Destroy()
