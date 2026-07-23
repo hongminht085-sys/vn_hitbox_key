@@ -88,7 +88,7 @@
         </button>
 
         <!-- Ô hiển thị Key và nút Copy -->
-        <div id="keyDisplay" class="key-box"></div>
+        <div id="keyDisplay" class="key-box">vn-test</div>
         <button id="copyBtn" class="btn btn-get" style="display:none;" onclick="copyKey()">COPY KEY</button>
 
         <div class="note">Key cố định theo thiết bị trong 24h!</div>
@@ -96,6 +96,7 @@
 
     <script>
         let hasClickedFollow = false;
+        const FIXED_KEY = "vn-test"; // Key duy nhất đồng bộ với script
 
         function startCountdown() {
             hasClickedFollow = true;
@@ -116,53 +117,16 @@
             }, 1000);
         }
 
-        function generateRandomKey() {
-            const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            const lowercase = "abcdefghijklmnopqrstuvwxyz";
-            const numbers = "0123456789";
-
-            let chars = [];
-            for (let i = 0; i < 4; i++) {
-                chars.push(uppercase.charAt(Math.floor(Math.random() * uppercase.length)));
-            }
-            for (let i = 0; i < 4; i++) {
-                chars.push(lowercase.charAt(Math.floor(Math.random() * lowercase.length)));
-            }
-            for (let i = 0; i < 3; i++) {
-                chars.push(numbers.charAt(Math.floor(Math.random() * numbers.length)));
-            }
-
-            for (let i = chars.length - 1; i > 0; i--) {
-                let j = Math.floor(Math.random() * (i + 1));
-                [chars[i], chars[j]] = [chars[j], chars[i]];
-            }
-
-            return "vn-" + chars.join("");
-        }
-
-        const STORAGE_KEY = "vn_hitbox_user_key";
-        const STORAGE_TIME = "vn_hitbox_key_time";
-        
-        let activeKey = localStorage.getItem(STORAGE_KEY);
-        let savedTime = localStorage.getItem(STORAGE_TIME);
-        let currentTime = new Date().getTime();
-
-        if (!activeKey || !savedTime || (currentTime - savedTime > 86400000)) {
-            activeKey = generateRandomKey();
-            localStorage.setItem(STORAGE_KEY, activeKey);
-            localStorage.setItem(STORAGE_TIME, currentTime);
-        }
-
         function revealKey() {
             if (!hasClickedFollow) return;
-            document.getElementById("keyDisplay").innerText = activeKey;
+            document.getElementById("keyDisplay").innerText = FIXED_KEY;
             document.getElementById("keyDisplay").style.display = "block";
             document.getElementById("copyBtn").style.display = "block";
             document.getElementById("getKeyBtn").style.display = "none";
         }
 
         function copyKey() {
-            navigator.clipboard.writeText(activeKey).then(() => {
+            navigator.clipboard.writeText(FIXED_KEY).then(() => {
                 const btn = document.getElementById("copyBtn");
                 btn.innerText = "✔ ĐÃ COPY KEY!";
                 setTimeout(() => {
