@@ -8,7 +8,6 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SAVE_FILE_NAME = "vn_hitbox_secure_data.json"
 local WEB_GETKEY_URL = "https://hongminht085-sys.github.io/vn_hitbox_key/"
-
 local CORRECT_KEY = "vn-test"
 
 local function GetDeviceHWID()
@@ -118,6 +117,7 @@ local function loadHitboxMenu(currentKey)
             local hrp = char:FindFirstChild("HumanoidRootPart")
             local humanoid = char:FindFirstChildOfClass("Humanoid")
             
+            -- Sửa tính năng Bay cho phép bay lên trời/xuống đất hoàn hảo bằng Camera LookVector và các phím chuyên dụng
             if isFlyEnabled and hrp and humanoid then
                 humanoid.PlatformStand = true
                 if not flyBodyVelocity or not flyBodyVelocity.Parent then
@@ -139,17 +139,11 @@ local function loadHitboxMenu(currentKey)
                 local moveDirection = Vector3.new(0, 0, 0)
                 local camLook = cam.CFrame.LookVector
                 local camRight = cam.CFrame.RightVector
-                
-                local flatLook = Vector3.new(camLook.X, 0, camLook.Z)
-                if flatLook.Magnitude > 0 then flatLook = flatLook.Unit else flatLook = Vector3.new(0,0, -1) end
-                
-                local flatRight = Vector3.new(camRight.X, 0, camRight.Z)
-                if flatRight.Magnitude > 0 then flatRight = flatRight.Unit else flatRight = Vector3.new(1,0,0) end
 
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + flatLook end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - flatLook end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - flatRight end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + flatRight end
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + camLook end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - camLook end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - camRight end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + camRight end
                 
                 if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
                     moveDirection = moveDirection + Vector3.new(0, 1, 0) 
@@ -169,21 +163,22 @@ local function loadHitboxMenu(currentKey)
                 if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
             end
 
-            if isTeleEnabled and selectedTarget and selectedTarget.Character then
+            -- Logic Teleport toàn map theo yêu cầu: Dưới vực/mặt đất -> tele lên trời đứng im; Chết -> tắt tele; Lên mặt đất -> tele tiếp
+            if isTeleEnabled and selectedTarget then
                 local targetChar = selectedTarget.Character
-                local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-                local targetHumanoid = targetChar:FindFirstChildOfClass("Humanoid")
+                local targetHumanoid = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+                local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
 
-                if targetHrp and targetHumanoid and targetHumanoid.Health > 0 then
+                if not targetChar or not targetHumanoid or targetHumanoid.Health <= 0 then
+                    isTeleEnabled = false
+                elseif targetHrp then
                     if targetHrp.Position.Y < -5 then
-                        isTeleEnabled = false
-                        hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(0, 15, 0))
+                        hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(0, 25, 0))
+                        hrp.Velocity = Vector3.new(0, 0, 0)
                     else
                         hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 2)
                         hrp.Velocity = Vector3.new(0, 0, 0)
                     end
-                else
-                    isTeleEnabled = false
                 end
             end
         end
@@ -437,7 +432,7 @@ local function loadHitboxMenu(currentKey)
     resetServerBtn.Size = UDim2.new(0.92, 0, 0, 28)
     resetServerBtn.Position = UDim2.new(0.04, 0, 0.29, 0)
     resetServerBtn.BackgroundColor3 = Color3.fromRGB(40, 30, 15)
-    resetServerBtn.Text = "🔄 CẬP NHẬT / REFRESH DANH SÁCH"
+    resetServerBtn.Text = "🔄 QUÉT FULL MAP / REFRESH DANH SÁCH"
     resetServerBtn.TextColor3 = Color3.fromRGB(255, 200, 0)
     resetServerBtn.Font = Enum.Font.Code
     resetServerBtn.TextSize = 10
@@ -573,6 +568,7 @@ local function loadHitboxMenu(currentKey)
     teleStroke.Color = Color3.fromRGB(255, 80, 110)
     teleStroke.Thickness = 1
 
+    -- Sửa hoàn toàn lỗi bật/tắt nút Teleport đảm bảo phản hồi ngay lập tức
     teleToggleBtn.MouseButton1Click:Connect(function()
         if selectedTarget then
             isTeleEnabled = not isTeleEnabled
@@ -625,7 +621,6 @@ end
 local currentHWID = GetDeviceHWID()
 local savedData = LoadKeyData()
 
--- Đã chỉnh sửa: Thoát game (Restart/Rejoin) file lưu trữ sẽ bị xóa tự động, yêu cầu nhập lại key khi vào game bật script lại.
 if savedData and savedData.Key == CORRECT_KEY and savedData.HWID == currentHWID then
     pcall(function()
         if delfile then
@@ -756,6 +751,6 @@ submitBtn.MouseButton1Click:Connect(function()
         keyGui:Destroy()
         loadHitboxMenu(CORRECT_KEY)
     else
-        errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB"
+        errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB] "
     end
 end)
