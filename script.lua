@@ -2,13 +2,29 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
+local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
-local SAVE_FILE_NAME = "vn_hitbox_key_data.json"
--- Đường dẫn lấy file key trực tiếp từ web của bro
+local SAVE_FILE_NAME = "vn_hitbox_secure_data.json"
 local WEB_KEY_URL = "https://hongminht085-sys.github.io/vn_hitbox_key/key.txt"
 local WEB_GETKEY_URL = "https://hongminht085-sys.github.io/vn_hitbox_key/"
+
+-- Lấy mã phần cứng (HWID) duy nhất của thiết bị
+local function GetDeviceHWID()
+    local success, hwid = pcall(function()
+        if gethwid then
+            return gethwid()
+        elseif RbxAnalyticsService and RbxAnalyticsService.GetClientId then
+            return RbxAnalyticsService:GetClientId()
+        end
+    end)
+    if success and hwid and hwid ~= "" then
+        return hwid
+    end
+    -- Fallback nếu executor không hỗ trợ (dùng tên nhân vật kết hợp gameID làm mã định danh tạm)
+    return Player.Name .. "_" .. tostring(game.GameId)
+end
 
 local function LoadKeyData()
     if readfile and pcall(readfile, SAVE_FILE_NAME) then
@@ -22,9 +38,9 @@ local function LoadKeyData()
     return nil
 end
 
-local function SaveKeyData(keyStr, expireTime)
+local function SaveKeyData(keyStr, hwidStr, expireTime)
     if writefile then
-        local data = { Key = keyStr, ExpireTime = expireTime }
+        local data = { Key = keyStr, HWID = hwidStr, ExpireTime = expireTime }
         pcall(function()
             writefile(SAVE_FILE_NAME, HttpService:JSONEncode(data))
         end)
@@ -39,16 +55,21 @@ local function ClearKeyData()
     end
 end
 
--- Hàm tải key mới nhất từ web về check
+-- Tải key từ web về
 local function GetKeyFromServer()
     local success, result = pcall(function()
         return game:HttpGet(WEB_KEY_URL)
     end)
     if success and result then
-        -- Loại bỏ khoảng trắng hoặc xuống dòng thừa trong file text của web
         return string.gsub(result, "%s+", "")
     end
     return nil
+end
+
+-- HÀM KIỂM TRA ĐỊNH DẠNG: vn- [4 chữ hoa] [4 chữ thường] [3 số]
+local function IsValidKeyFormat(keyStr)
+    if type(keyStr) ~= "string" then return false end
+    return string.match(keyStr, "^vn-[%u][%u][%u][%u][%l][%l][%l][%l][%d][%d][%d]$") ~= nil
 end
 
 -- Khai báo hàm mở Menu chính
@@ -172,7 +193,7 @@ local function loadHitboxMenu(currentKey)
     Title.Parent = main
     Title.Size = UDim2.new(1, 0, 0, 38)
     Title.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
-    Title.Text = "⚡ [ vn hitbox ] // PANEL"
+    Title.Text = "⚡ [ vn hitbox ] // 1 DEVICE"
     Title.TextColor3 = Color3.fromRGB(0, 243, 255)
     Title.Font = Enum.Font.Code
     Title.TextSize = 12
@@ -311,7 +332,7 @@ local function loadHitboxMenu(currentKey)
     clearKeyBtn.Size = UDim2.new(0.88, 0, 0, 32)
     clearKeyBtn.Position = UDim2.new(0.06, 0, 0.77, 0)
     clearKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 20, 30)
-    clearKeyBtn.Text = "🔑 XÓA KEY & TEST NHẬP LẠI"
+    clearKeyBtn.Text = "🔑 XÓA KEY & ĐỔI MÁY"
     clearKeyBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
     clearKeyBtn.Font = Enum.Font.Code
     clearKeyBtn.TextSize = 11
@@ -372,18 +393,21 @@ local function loadHitboxMenu(currentKey)
     end)
 end
 
--- Kiểm tra key lưu trong máy 24h
+-- Kiểm tra key lưu trong máy, đồng thời đối chiếu HWID thiết bị
+local currentHWID = GetDeviceHWID()
 local savedData = LoadKeyData()
-if savedData and savedData.Key and savedData.ExpireTime and os.time() < savedData.ExpireTime then
-    local currentServerKey = GetKeyFromServer()
-    -- Nếu key lưu khớp với key hiện tại trên web thì cho qua thẳng menu luôn
-    if currentServerKey and savedData.Key == currentServerKey then
-        loadHitboxMenu(savedData.Key)
-        return
+
+if savedData and savedData.Key and savedData.HWID and savedData.ExpireTime and os.time() < savedData.ExpireTime then
+    if savedData.HWID == currentHWID then
+        local currentServerKey = GetKeyFromServer()
+        if currentServerKey and savedData.Key == currentServerKey then
+            loadHitboxMenu(savedData.Key)
+            return
+        end
     end
 end
 
--- ===== GIAO DIỆN NHẬP KEY (CÓ TÍCH HỢP NÚT GET KEY) =====
+-- GIAO DIỆN NHẬP KEY
 if PlayerGui:FindFirstChild("VN_KeyGui") then
     PlayerGui.VN_KeyGui:Destroy()
 end
@@ -397,7 +421,7 @@ keyGui.IgnoreGuiInset = true
 
 local keyMain = Instance.new("Frame")
 keyMain.Parent = keyGui
-keyMain.Size = UDim2.new(0, 320, 0, 225) -- Tăng chiều cao để vừa nút Get Key
+keyMain.Size = UDim2.new(0, 320, 0, 225)
 keyMain.Position = UDim2.new(0.5, -160, 0.4, -112)
 keyMain.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
 keyMain.BorderColor3 = Color3.fromRGB(0, 243, 255)
@@ -417,7 +441,7 @@ local keyTitle = Instance.new("TextLabel")
 keyTitle.Parent = keyMain
 keyTitle.Size = UDim2.new(1, 0, 0, 40)
 keyTitle.BackgroundColor3 = Color3.fromRGB(16, 16, 28)
-keyTitle.Text = "⚡ [ vn hitbox ] // WEB_AUTH (24H)"
+keyTitle.Text = "⚡ [ vn hitbox ] // 1 DEVICE_AUTH"
 keyTitle.TextColor3 = Color3.fromRGB(0, 243, 255)
 keyTitle.Font = Enum.Font.Code
 keyTitle.TextSize = 12
@@ -429,7 +453,7 @@ keyBox.Parent = keyMain
 keyBox.Size = UDim2.new(0.85, 0, 0, 38)
 keyBox.Position = UDim2.new(0.075, 0, 0.25, 0)
 keyBox.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
-keyBox.PlaceholderText = "> Nhập mã bảo mật từ web..."
+keyBox.PlaceholderText = "> Nhập key (vn-ABCDabcd123)"
 keyBox.Text = ""
 keyBox.TextColor3 = Color3.fromRGB(0, 255, 150)
 keyBox.PlaceholderColor3 = Color3.fromRGB(90, 90, 120)
@@ -452,10 +476,9 @@ errorLabel.BackgroundTransparency = 1
 errorLabel.Text = ""
 errorLabel.TextColor3 = Color3.fromRGB(255, 60, 90)
 errorLabel.Font = Enum.Font.Code
-errorLabel.TextSize = 11
+errorLabel.TextSize = 9
 errorLabel.ZIndex = 10000
 
--- Nút Xác Thực Key
 local submitBtn = Instance.new("TextButton")
 submitBtn.Parent = keyMain
 submitBtn.Size = UDim2.new(0.85, 0, 0, 36)
@@ -470,7 +493,6 @@ submitBtn.AutoButtonColor = false
 submitBtn.ZIndex = 10000
 Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0, 6)
 
--- Nút Lấy Link Get Key (Thêm mới theo yêu cầu)
 local getKeyBtn = Instance.new("TextButton")
 getKeyBtn.Parent = keyMain
 getKeyBtn.Size = UDim2.new(0.85, 0, 0, 36)
@@ -490,7 +512,6 @@ getKeyStroke.Parent = getKeyBtn
 getKeyStroke.Color = Color3.fromRGB(0, 243, 255)
 getKeyStroke.Thickness = 1
 
--- Sự kiện bấm nút Get Key (Copy link hoặc thông báo)
 getKeyBtn.MouseButton1Down:Connect(function()
     if setclipboard then
         setclipboard(WEB_GETKEY_URL)
@@ -500,19 +521,26 @@ getKeyBtn.MouseButton1Down:Connect(function()
     end
 end)
 
--- Sự kiện kiểm tra key từ Web
 submitBtn.MouseButton1Down:Connect(function()
+    local inputVal = string.gsub(keyBox.Text, "%s+", "")
+    
+    if not IsValidKeyFormat(inputVal) then
+        errorLabel.Text = "[!] SAI ĐỊNH DẠNG (YÊU CẦU: vn-XXXXxxxx123)"
+        return
+    end
+
     submitBtn.Text = "ĐANG CHECK..."
     local serverKey = GetKeyFromServer()
     
-    if serverKey and keyBox.Text == serverKey then
+    if serverKey and inputVal == serverKey then
         local expireTime = os.time() + 86400
-        SaveKeyData(serverKey, expireTime)
+        -- Lưu kèm HWID thiết bị hiện tại vào máy
+        SaveKeyData(serverKey, currentHWID, expireTime)
         
         keyGui:Destroy()
         loadHitboxMenu(serverKey)
     else
-        errorLabel.Text = "[!] SAI KEY HOẶC MẤT KẾT NỐI WEB"
+        errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB"
         submitBtn.Text = "XÁC NHẬN KEY"
         for i = 1, 3 do
             keyMain.Position = keyMain.Position + UDim2.new(0, 4, 0, 0)
