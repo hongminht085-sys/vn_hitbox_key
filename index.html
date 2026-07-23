@@ -1,118 +1,27 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VN Hitbox - Get Key</title>
-    <style>
-        body {
-            background-color: #0b0b12;
-            color: #00f3ff;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: #121220;
-            border: 1px solid #00f3ff;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
-            width: 320px;
-        }
-        h2 {
-            margin-bottom: 20px;
-            font-size: 18px;
-        }
-        .key-box {
-            background: #18182e;
-            border: 1px dashed #00f3ff;
-            padding: 12px;
-            font-size: 14px;
-            color: #00ff96;
-            margin-bottom: 20px;
-            word-break: break-all;
-            border-radius: 6px;
-        }
-        button {
-            background-color: #00f3ff;
-            color: #0b0b12;
-            border: none;
-            padding: 12px 20px;
-            font-weight: bold;
-            font-family: 'Courier New', Courier, monospace;
-            cursor: pointer;
-            border-radius: 6px;
-            width: 100%;
-            transition: 0.2s;
-        }
-        button:hover {
-            background-color: #00bfcc;
-        }
-        .note {
-            font-size: 10px;
-            color: #8888aa;
-            margin-top: 15px;
-        }
-    </style>
-</head>
-<body>
+function generateRandomKey() {
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
 
-    <div class="container">
-        <h2>⚡ VN HITBOX - SYSTEM</h2>
-        <div class="key-box" id="keyDisplay">Đang tạo key ngẫu nhiên...</div>
-        <button id="copyBtn" onclick="copyKey()">COPY KEY</button>
-        <div class="note">Key chỉ dùng cho 1 thiết bị duy nhất!</div>
-    </div>
+    // Chọn đúng số lượng cần thiết: 4 hoa, 4 thường, 3 số
+    let chars = [];
+    
+    for (let i = 0; i < 4; i++) {
+        chars.push(uppercase.charAt(Math.floor(Math.random() * uppercase.length)));
+    }
+    for (let i = 0; i < 4; i++) {
+        chars.push(lowercase.charAt(Math.floor(Math.random() * lowercase.length)));
+    }
+    for (let i = 0; i < 3; i++) {
+        chars.push(numbers.charAt(Math.floor(Math.random() * numbers.length)));
+    }
 
-    <script>
-        // Hàm random chuỗi theo đúng format: vn- [4 chữ hoa] [4 chữ thường] [3 số]
-        function generateRandomKey() {
-            const upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            const lowerChars = "abcdefghijklmnopqrstuvwxyz";
-            const numbers = "0123456789";
+    // Xáo trộn (trộn đều) mảng ký tự lên một cách ngẫu nhiên hoàn toàn (Thuật toán Fisher-Yates)
+    for (let i = chars.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
 
-            let result = "vn-";
-            
-            // Lấy 4 chữ hoa ngẫu nhiên
-            for (let i = 0; i < 4; i++) {
-                result += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
-            }
-            // Lấy 4 chữ thường ngẫu nhiên
-            for (let i = 0; i < 4; i++) {
-                result += lowerChars.charAt(Math.floor(Math.random() * lowerChars.length));
-            }
-            // Lấy 3 số ngẫu nhiên
-            for (let i = 0; i < 3; i++) {
-                result += numbers.charAt(Math.floor(Math.random() * numbers.length));
-            }
-
-            return result;
-        }
-
-        // Tạo key mới mỗi khi người dùng vào trang web
-        const newKey = generateRandomKey();
-        document.getElementById("keyDisplay").innerText = newKey;
-
-        // Lưu ý: Nếu bro muốn tự động đồng bộ key này vào file `key.txt` trên GitHub Pages, 
-        // thông thường GitHub Pages là static hosting nên không ghi đè file trực tiếp được bằng JS thuần chạy ở client.
-        // Giải pháp tối ưu: Bro có thể dùng một dịch vụ lưu trữ key online miễn phí (như Pastebin API, Firebase, hoặc Cloudflare Worker) 
-        // hoặc mỗi lần bấm nút, trang web sẽ gọi tới Worker để cập nhật key mới vào file key.txt của GitHub.
-
-        function copyKey() {
-            const keyText = document.getElementById("keyDisplay").innerText;
-            navigator.clipboard.writeText(keyText).then(() => {
-                const btn = document.getElementById("copyBtn");
-                btn.innerText = "ĐÃ COPY KEY!";
-                setTimeout(() => {
-                    btn.innerText = "COPY KEY";
-                }, 2000);
-            });
-        }
-    </script>
-</body>
-</html>
+    // Ghép tiền tố vn- vào đằng trước
+    return "vn-" + chars.join("");
+}
