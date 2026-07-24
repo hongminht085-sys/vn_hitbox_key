@@ -21,7 +21,7 @@ local function GetDeviceHWID()
     if success and hwid and hwid ~= "" then
         return hwid
     end
-    return Player.Name .. "_" .. tostring(game.GameId)
+    return Player.Name "_" .. tostring(game.GameId)
 end
 
 local function LoadKeyData()
@@ -117,7 +117,7 @@ local function loadHitboxMenu(currentKey)
             local hrp = char:FindFirstChild("HumanoidRootPart")
             local humanoid = char:FindFirstChildOfClass("Humanoid")
             
-            -- Sửa tính năng Bay cho phép bay lên trời/xuống đất hoàn hảo bằng Camera LookVector và các phím chuyên dụng
+            -- Sửa tính năng Bay hoàn chỉnh lên/xuống trời bằng Camera và phím
             if isFlyEnabled and hrp and humanoid then
                 humanoid.PlatformStand = true
                 if not flyBodyVelocity or not flyBodyVelocity.Parent then
@@ -152,8 +152,8 @@ local function loadHitboxMenu(currentKey)
                     moveDirection = moveDirection - Vector3.new(0, 1, 0) 
                 end
 
-                if humanoid.MoveDirection.Magnitude > 0 then
-                    moveDirection = moveDirection + humanoid.MoveDirection
+                if humanoid.MoveDirection.Magnitude > 0 and moveDirection.Magnitude == 0 then
+                    moveDirection = humanoid.MoveDirection
                 end
 
                 flyBodyVelocity.Velocity = moveDirection * flySpeed
@@ -163,7 +163,7 @@ local function loadHitboxMenu(currentKey)
                 if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
             end
 
-            -- Logic Teleport toàn map theo yêu cầu: Dưới vực/mặt đất -> tele lên trời đứng im; Chết -> tắt tele; Lên mặt đất -> tele tiếp
+            -- Logic Teleport toàn map theo yêu cầu: Dưới vực -> tele lên trời đứng im; Chết -> tắt tele; Lên mặt đất -> tele tiếp
             if isTeleEnabled and selectedTarget then
                 local targetChar = selectedTarget.Character
                 local targetHumanoid = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
@@ -198,13 +198,14 @@ local function loadHitboxMenu(currentKey)
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.IgnoreGuiInset = true
 
+    -- Thay nút tròn bằng lá cờ Việt Nam (🇻🇳)
     local ToggleBtn = Instance.new("TextButton")
     ToggleBtn.Parent = gui
     ToggleBtn.Size = UDim2.new(0, 55, 0, 55)
     ToggleBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
     ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-    ToggleBtn.Text = "🎯"
-    ToggleBtn.TextColor3 = Color3.fromRGB(0, 243, 255)
+    ToggleBtn.Text = "🇻🇳"
+    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     ToggleBtn.Font = Enum.Font.GothamBold
     ToggleBtn.TextSize = 24
     ToggleBtn.Active = true
@@ -453,13 +454,13 @@ local function loadHitboxMenu(currentKey)
     listTitle.TextXAlignment = Enum.TextXAlignment.Left
     listTitle.ZIndex = 9000
 
-    local isListExpanded = false
+    local isListExpanded = true
     local toggleExpandBtn = Instance.new("TextButton")
     toggleExpandBtn.Parent = main
     toggleExpandBtn.Size = UDim2.new(0, 24, 0, 20)
     toggleExpandBtn.Position = UDim2.new(0.92, -24, 0.35, 0)
     toggleExpandBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-    toggleExpandBtn.Text = "🗖"
+    toggleExpandBtn.Text = "▲" -- Mũi tên lên xuống để ẩn/hiện danh sách
     toggleExpandBtn.TextColor3 = Color3.fromRGB(0, 243, 255)
     toggleExpandBtn.Font = Enum.Font.Code
     toggleExpandBtn.TextSize = 11
@@ -484,15 +485,43 @@ local function loadHitboxMenu(currentKey)
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     uiListLayout.Padding = UDim.new(0, 4)
 
+    -- Hàm tự động thay đổi vị trí các nút bên dưới khi ẩn/hiện danh sách tele
+    local teleToggleBtn = Instance.new("TextButton")
+    teleToggleBtn.Parent = main
+    teleToggleBtn.Size = UDim2.new(0.92, 0, 0, 35)
+    teleToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+    teleToggleBtn.Text = "TELEPORT DÍNH MỤC TIÊU: TẮT"
+    teleToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
+    teleToggleBtn.Font = Enum.Font.Code
+    teleToggleBtn.TextSize = 11
+    teleToggleBtn.Active = true
+    teleToggleBtn.AutoButtonColor = false
+    teleToggleBtn.ZIndex = 9000
+    Instance.new("UICorner", teleToggleBtn).CornerRadius = UDim.new(0, 6)
+
+    local teleStroke = Instance.new("UIStroke")
+    teleStroke.Parent = teleToggleBtn
+    teleStroke.Color = Color3.fromRGB(255, 80, 110)
+    teleStroke.Thickness = 1
+
+    local function UpdateLayoutPositions()
+        if isListExpanded then
+            playerListContainer.Visible = true
+            playerListContainer.Size = UDim2.new(0.92, 0, 0, 130)
+            toggleExpandBtn.Text = "▲"
+            teleToggleBtn.Position = UDim2.new(0.04, 0, 0.75, 0)
+            main.CanvasSize = UDim2.new(0, 0, 0, 620)
+        else
+            playerListContainer.Visible = false
+            toggleExpandBtn.Text = "▼"
+            teleToggleBtn.Position = UDim2.new(0.04, 0, 0.44, 0)
+            main.CanvasSize = UDim2.new(0, 0, 0, 450)
+        end
+    end
+
     toggleExpandBtn.MouseButton1Click:Connect(function()
         isListExpanded = not isListExpanded
-        if isListExpanded then
-            playerListContainer.Size = UDim2.new(0.92, 0, 0, 250)
-            toggleExpandBtn.Text = "🗕"
-        else
-            playerListContainer.Size = UDim2.new(0.92, 0, 0, 130)
-            toggleExpandBtn.Text = "🗖"
-        end
+        UpdateLayoutPositions()
     end)
 
     local function PopulatePlayerList()
@@ -518,26 +547,12 @@ local function loadHitboxMenu(currentKey)
                 pBtn.ZIndex = 9001
                 Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 4)
 
-                task.spawn(function()
-                    local success, content = pcall(function()
-                        return Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size42x42)
-                    end)
-                    if success and content and pBtn.Parent then
-                        local icon = Instance.new("ImageLabel")
-                        icon.Parent = pBtn
-                        icon.Size = UDim2.new(0, 24, 0, 24)
-                        icon.Position = UDim2.new(1, -28, 0.5, -12)
-                        icon.BackgroundTransparency = 1
-                        icon.Image = content
-                        icon.ZIndex = 9002
-                        Instance.new("UICorner", icon).CornerRadius = UDim.new(1, 0)
-                    end
-                end)
-
                 pBtn.MouseButton1Click:Connect(function()
                     selectedTarget = p
-                    isTeleEnabled = true
                     PopulatePlayerList()
+                    if isTeleEnabled then
+                        teleToggleBtn.Text = "TELEPORT: ĐANG BẬT (" .. selectedTarget.Name .. ")"
+                    end
                 end)
             end
         end
@@ -549,26 +564,7 @@ local function loadHitboxMenu(currentKey)
     Players.PlayerAdded:Connect(PopulatePlayerList)
     Players.PlayerRemoving:Connect(PopulatePlayerList)
 
-    local teleToggleBtn = Instance.new("TextButton")
-    teleToggleBtn.Parent = main
-    teleToggleBtn.Size = UDim2.new(0.92, 0, 0, 35)
-    teleToggleBtn.Position = UDim2.new(0.04, 0, 0.75, 0)
-    teleToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
-    teleToggleBtn.Text = "TELEPORT DÍNH MỤC TIÊU: TẮT"
-    teleToggleBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
-    teleToggleBtn.Font = Enum.Font.Code
-    teleToggleBtn.TextSize = 11
-    teleToggleBtn.Active = true
-    teleToggleBtn.AutoButtonColor = false
-    teleToggleBtn.ZIndex = 9000
-    Instance.new("UICorner", teleToggleBtn).CornerRadius = UDim.new(0, 6)
-
-    local teleStroke = Instance.new("UIStroke")
-    teleStroke.Parent = teleToggleBtn
-    teleStroke.Color = Color3.fromRGB(255, 80, 110)
-    teleStroke.Thickness = 1
-
-    -- Sửa hoàn toàn lỗi bật/tắt nút Teleport đảm bảo phản hồi ngay lập tức
+    -- Nút bấm Teleport bật/tắt thủ công chuẩn xác
     teleToggleBtn.MouseButton1Click:Connect(function()
         if selectedTarget then
             isTeleEnabled = not isTeleEnabled
@@ -751,6 +747,6 @@ submitBtn.MouseButton1Click:Connect(function()
         keyGui:Destroy()
         loadHitboxMenu(CORRECT_KEY)
     else
-        errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB] "
+        errorLabel.Text = "[!] SAI KEY HOẶC KHÔNG KHỚP VỚI WEB"
     end
 end)
